@@ -2,7 +2,13 @@ import { ImportError, RawCSVRow } from "./types";
 
 export class CSVValidator {
   private normalizeKey(key: string): string {
-    return key.trim().toLowerCase().replace(/\s+/g, "_");
+    return key
+      .replace(/^"+|"+$/g, "")
+      .trim()
+      .toLowerCase()
+      .replace(/\s+/g, "_")
+      .replace(/\//g, "_")
+      .replace(/[^a-z0-9_]/g, "");
   }
 
   private get(row: RawCSVRow, field: string): string | undefined {
