@@ -1,8 +1,9 @@
 import { NextResponse } from "next/server";
+import { ClassificationService } from "@/lib/services/classification-service";
 
 export async function POST() {
-  return NextResponse.json({
-    success: true,
-    message: "Classification engine not yet implemented.",
-  });
+  const service = new ClassificationService();
+  const result = await service.classifyAll();
+
+  return NextResponse.json(result);
 }

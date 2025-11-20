@@ -1,15 +1,14 @@
 import { NextResponse } from "next/server";
+import { DisplayCategoryService } from "@/lib/services/display-category-service";
 
 export async function GET() {
-  return NextResponse.json({
-    success: true,
-    message: "Display categories endpoint not yet implemented.",
-  });
+  const service = new DisplayCategoryService();
+  const result = await service.list();
+  return NextResponse.json(result);
 }
 
 export async function POST() {
-  return NextResponse.json({
-    success: true,
-    message: "Display category creation not yet implemented.",
-  });
+  const service = new DisplayCategoryService();
+  const result = await service.create();
+  return NextResponse.json(result);
 }
