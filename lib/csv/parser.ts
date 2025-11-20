@@ -1,65 +1,36 @@
-import { RawCSVRow, SourceSystem } from "./types";
+import Papa from "papaparse";
+import { RawCSVRow } from "./types";
 
 export class CSVParser {
-  detectSourceSystem(headers: string[]): SourceSystem | null {
-    const h = headers.map(x => x.toLowerCase());
-
-    if (h.includes("date") && h.includes("amount")) {
-      return "quickbooks";
-    }
-    if (h.includes("pay date")) {
-      return "paylocity";
-    }
-    if (h.includes("deal value") || h.includes("close date")) {
-      return "pipedrive";
-    }
-
-    return null;
-  }
-
-  normalizeHeaders(headers: string[]): string[] {
-    return headers.map(h =>
-      h.trim().toLowerCase().replace(/\s+/g, " ")
-    );
-  }
-
   parse(csvText: string): { headers: string[]; rows: RawCSVRow[] } {
-    const rawLines = csvText.split(/\r?\n/);
+    // Skip QuickBooks header lines (first 3: title, date range, empty)
+    const lines = csvText.split("\n");
+    const cleanCsv = lines.slice(3).join("\n");
 
-    if (rawLines.length < 5) {
-      return { headers: [], rows: [] };
-    }
+    const result = Papa.parse(cleanCsv, {
+      header: true,
+      skipEmptyLines: true,
+      dynamicTyping: false,
+      quoteChar: '"',
+      escapeChar: '"',
+      transform: (value: string) => value.replace(/^"+|"+$/g, "").trim(), // Extra quote stripping
+    });
 
-    // Skip first 3 rows
-    const headerLine = rawLines[3];
-    const rawHeaders = headerLine.split(",").map(h => h.trim());
-    const headers = this.normalizeHeaders(rawHeaders);
+    const headers = result.meta.fields || [];
 
-    const rows: RawCSVRow[] = [];
+    const rows = result.data as RawCSVRow[];
 
-    // Process rows starting at line 4 (index 4) through second-to-last real row
-    for (let i = 4; i < rawLines.length; i++) {
-      const line = rawLines[i];
+    // Filter out footer/invalid rows
+    const filteredRows = rows.filter(
+      (row) =>
+        row["Transaction date"] &&
+        row["Amount"] &&
+        !row["Distribution account"]?.startsWith("TOTAL") &&
+        !row["Distribution account"]?.startsWith("Cash Basis") &&
+        !row["Distribution account"]?.includes("Unapplied") &&
+        !row["Distribution account"]?.includes("Uncategorized")
+    );
 
-      if (!line || line.trim() === "") continue;
-
-      const firstCol = line.split(",")[0].trim();
-
-      if (firstCol.toLowerCase() === "total") continue;
-      if (firstCol.toLowerCase().includes("cash basis")) continue;
-      if (firstCol.toLowerCase().includes("accrual basis")) continue;
-
-      const parts = line.split(",");
-
-      const row: RawCSVRow = {};
-      for (let j = 0; j < headers.length; j++) {
-        const val = parts[j] !== undefined ? parts[j].trim() : null;
-        row[headers[j]] = val;
-      }
-
-      rows.push(row);
-    }
-
-    return { headers, rows };
+    return { headers, rows: filteredRows };
   }
 }
