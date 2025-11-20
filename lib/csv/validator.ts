@@ -1,91 +1,81 @@
 import { ImportError, RawCSVRow } from "./types";
 
 export class CSVValidator {
+  // Normalize header names: "Distribution account" → "distribution_account"
+  private normalizeKey(key: string): string {
+    return key.toLowerCase().trim().replace(/\s+/g, "_");
+  }
+
   validateRow(row: RawCSVRow, rowIndex: number): ImportError[] {
     const errors: ImportError[] = [];
 
-    // Required fields
-    const requiredFields = ["distribution_account", "transaction_date", "transaction_type", "amount"];
+    // Map normalized keys to actual values
+    const get = (field: string): any => {
+      const normalized = this.normalizeKey(field);
+      for (const key in row) {
+        if (this.normalizeKey(key) === normalized) {
+          return row[key];
+        }
+      }
+      return undefined;
+    };
+
+    // Required fields (using display names)
+    const requiredFields = ["Distribution account", "Transaction date", "Transaction type", "Amount"];
     for (const f of requiredFields) {
-      const err = this.validateRequired(row[f], f, rowIndex);
-      if (err) errors.push(err);
+      const value = get(f);
+      if (value === undefined || value === null || value === "") {
+        errors.push({
+          row: rowIndex,
+          field: f,
+          message: `${f} is required`,
+        });
+      }
     }
 
-    // If required fields missing, return now
     if (errors.length > 0) return errors;
 
-    // Allowed bank accounts
-    const allowedAccounts = ["1000", "1010", "1015", "1020"];
-    const acct = String(row["distribution_account"]).trim();
-    if (!allowedAccounts.includes(acct)) {
+    const acct = String(get("Distribution account") || "").trim().split(" ")[0]; // e.g., "1000 Bank of America" → "1000"
+    if (!["1000", "1010", "1015", "1020"].includes(acct)) {
       errors.push({
         row: rowIndex,
-        field: "distribution_account",
+        field: "Distribution account",
         value: acct,
-        message: "Account is not a permitted cash account"
+        message: "Account is not a permitted cash account",
       });
     }
 
-    // Excluded transaction types
-    const ttype = String(row["transaction_type"]).trim();
+    const ttype = String(get("Transaction type") || "").trim();
     if (ttype === "Transfer" || ttype === "Journal Entry") {
       errors.push({
         row: rowIndex,
-        field: "transaction_type",
+        field: "Transaction type",
         value: ttype,
-        message: "Transaction type is excluded"
+        message: "Transaction type is excluded",
       });
     }
 
-    // Validate date
-    const d = this.validateDate(row["transaction_date"], "transaction_date", rowIndex);
-    if (d) errors.push(d);
+    const dateVal = get("Transaction date");
+    const parsed = new Date(dateVal);
+    if (isNaN(parsed.getTime())) {
+      errors.push({
+        row: rowIndex,
+        field: "Transaction date",
+        value: dateVal,
+        message: "Invalid date format",
+      });
+    }
 
-    // Validate amount
-    const a = this.validateAmount(row["amount"], "amount", rowIndex);
-    if (a) errors.push(a);
+    const amountVal = String(get("Amount") || "").replace(/[$,]/g, "");
+    if (isNaN(Number(amountVal))) {
+      errors.push({
+        row: rowIndex,
+        field: "Amount",
+        value: get("Amount"),
+        message: "Invalid amount format",
+      });
+    }
 
     return errors;
-  }
-
-  validateRequired(value: any, field: string, rowIndex: number): ImportError | null {
-    if (value === undefined || value === null || value === "") {
-      return {
-        row: rowIndex,
-        field,
-        value,
-        message: `${field} is required`
-      };
-    }
-    return null;
-  }
-
-  validateDate(value: any, field: string, rowIndex: number): ImportError | null {
-    const parsed = new Date(value);
-    if (isNaN(parsed.getTime())) {
-      return {
-        row: rowIndex,
-        field,
-        value,
-        message: `Invalid date format`
-      };
-    }
-    return null;
-  }
-
-  validateAmount(value: any, field: string, rowIndex: number): ImportError | null {
-    const cleaned = String(value).replace(/[$,]/g, "");
-    const num = Number(cleaned);
-
-    if (isNaN(num)) {
-      return {
-        row: rowIndex,
-        field,
-        value,
-        message: `Invalid amount format`
-      };
-    }
-
-    return null;
   }
 }
