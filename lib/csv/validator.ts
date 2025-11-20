@@ -1,9 +1,14 @@
 import { ImportError, RawCSVRow } from "./types";
 
 export class CSVValidator {
+  private normalizeKey(key: string): string {
+    return key.trim().toLowerCase().replace(/\s+/g, "_");
+  }
+
   private get(row: RawCSVRow, field: string): string | undefined {
+    const normalizedField = this.normalizeKey(field);
     for (const key in row) {
-      if (key.trim().toLowerCase().replace(/\s+/g, "_") === field.toLowerCase()) {
+      if (this.normalizeKey(key) === normalizedField) {
         return String(row[key] ?? "").trim().replace(/^"+|"+$/g, "");
       }
     }
@@ -20,9 +25,8 @@ export class CSVValidator {
         errors.push({ row: rowIndex, field: f, message: `${f} is required` });
       }
     }
-    if (errors.length) return errors;
+    if (errors.length > 0) return errors;
 
-    // Account number (first part of "1000 Bank of America")
     const acctStr = this.get(row, "Distribution account")!;
     const acctNum = acctStr.split(" ")[0];
     if (!["1000", "1010", "1015", "1020"].includes(acctNum)) {
@@ -33,7 +37,6 @@ export class CSVValidator {
       });
     }
 
-    // Exclude Transfer / Journal Entry
     const ttype = this.get(row, "Transaction type")!;
     if (ttype === "Transfer" || ttype === "Journal Entry") {
       errors.push({
@@ -43,7 +46,16 @@ export class CSVValidator {
       });
     }
 
-    // Amount – strip quotes, commas, dollars
+    const dateVal = this.get(row, "Transaction date");
+    const parsed = new Date(dateVal!);
+    if (isNaN(parsed.getTime())) {
+      errors.push({
+        row: rowIndex,
+        field: "Transaction date",
+        message: "Invalid date format",
+      });
+    }
+
     const amountStr = this.get(row, "Amount")!.replace(/[$,]/g, "");
     if (isNaN(Number(amountStr))) {
       errors.push({
