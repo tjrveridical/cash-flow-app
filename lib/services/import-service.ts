@@ -1,9 +1,9 @@
 import { CSVParser } from "@/lib/csv/parser";
 import { CSVValidator } from "@/lib/csv/validator";
 import { TransactionMapper } from "@/lib/csv/transaction-mapper";
-import { CSVImportResult, ImportError, ParsedTransaction, SourceSystem } from "@/lib/csv/types";
-import { createClient } from "@supabase/supabase-js";
+import { CSVImportResult, ImportError, SourceSystem } from "@/lib/csv/types";
 import { MappedTransaction } from "@/lib/csv/types";
+import { createClient } from "@supabase/supabase-js";
 
 export class ImportService {
   private supabase;
@@ -32,18 +32,13 @@ export class ImportService {
 
     if (rows.length === 0) {
       result.success = false;
-      result.errors.push({
-        row: 0,
-        message: "CSV contains no data",
-      });
+      result.errors.push({ row: 0, message: "CSV contains no data" });
       return result;
     }
 
-    // Process each row
     for (let i = 0; i < rows.length; i++) {
       const row = rows[i];
 
-      // Validate row
       const errors = this.validator.validateRow(row, i + 1);
       if (errors.length > 0) {
         result.recordsFailed++;
@@ -51,10 +46,8 @@ export class ImportService {
         continue;
       }
 
-      // Map row -> ParsedTransaction
       const mapped: MappedTransaction = this.mapper.mapRow(row);
 
-      // Duplicate check
       const { data: existing } = await this.supabase
         .from("raw_transactions")
         .select("id")
@@ -66,9 +59,13 @@ export class ImportService {
         continue;
       }
 
-      // Insert into DB
+      const safeDate =
+        mapped.date instanceof Date && !isNaN(mapped.date.getTime())
+          ? mapped.date.toISOString()
+          : null;
+
       const { error } = await this.supabase.from("raw_transactions").insert({
-        date: mapped.date.toISOString(),
+        date: safeDate,
         amount: mapped.amount,
         description: mapped.description,
         transaction_type: mapped.transaction_type,
@@ -91,6 +88,7 @@ export class ImportService {
       result.recordsImported++;
     }
 
+    result.success = result.recordsFailed === 0;
     return result;
   }
 }
