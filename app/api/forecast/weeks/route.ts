@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
+import { ForecastService } from "@/lib/services/forecast-service";
 
 export async function GET() {
-  return NextResponse.json({
-    success: true,
-    message: "Forecast weeks endpoint not yet implemented.",
-  });
+  const service = new ForecastService();
+  const result = await service.listWeeks();
+  return NextResponse.json(result);
 }
