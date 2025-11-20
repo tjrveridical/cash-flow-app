@@ -3,6 +3,7 @@ import { CSVValidator } from "@/lib/csv/validator";
 import { TransactionMapper } from "@/lib/csv/transaction-mapper";
 import { CSVImportResult, ImportError, ParsedTransaction, SourceSystem } from "@/lib/csv/types";
 import { createClient } from "@supabase/supabase-js";
+import { MappedTransaction } from "@/lib/csv/types";
 
 export class ImportService {
   private supabase;
@@ -51,11 +52,23 @@ export class ImportService {
       }
 
       // Map row -> ParsedTransaction
-      const mapped: ParsedTransaction = this.mapper.mapRow(row, sourceSystem);
+      const mapped: MappedTransaction = this.mapper.mapRow(row);
+
+      // Duplicate check
+      const { data: existing } = await this.supabase
+        .from("raw_transactions")
+        .select("id")
+        .eq("source_id", mapped.source_id)
+        .limit(1);
+
+      if (existing && existing.length > 0) {
+        result.duplicates++;
+        continue;
+      }
 
       // Insert into DB
       const { error } = await this.supabase.from("raw_transactions").insert({
-        date: mapped.date,
+        date: mapped.date.toISOString(),
         amount: mapped.amount,
         description: mapped.description,
         transaction_type: mapped.transaction_type,

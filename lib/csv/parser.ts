@@ -24,26 +24,37 @@ export class CSVParser {
   }
 
   parse(csvText: string): { headers: string[]; rows: RawCSVRow[] } {
-    const lines = csvText
-      .split(/\r?\n/)
-      .map(l => l.trim())
-      .filter(l => l.length > 0);
+    const rawLines = csvText.split(/\r?\n/);
 
-    if (lines.length === 0) {
+    if (rawLines.length < 5) {
       return { headers: [], rows: [] };
     }
 
-    const rawHeaders = lines[0].split(",").map(h => h.trim());
+    // Skip first 3 rows
+    const headerLine = rawLines[3];
+    const rawHeaders = headerLine.split(",").map(h => h.trim());
     const headers = this.normalizeHeaders(rawHeaders);
 
     const rows: RawCSVRow[] = [];
 
-    for (let i = 1; i < lines.length; i++) {
-      const parts = lines[i].split(",");
-      const row: RawCSVRow = {};
+    // Process rows starting at line 4 (index 4) through second-to-last real row
+    for (let i = 4; i < rawLines.length; i++) {
+      const line = rawLines[i];
 
+      if (!line || line.trim() === "") continue;
+
+      const firstCol = line.split(",")[0].trim();
+
+      if (firstCol.toLowerCase() === "total") continue;
+      if (firstCol.toLowerCase().includes("cash basis")) continue;
+      if (firstCol.toLowerCase().includes("accrual basis")) continue;
+
+      const parts = line.split(",");
+
+      const row: RawCSVRow = {};
       for (let j = 0; j < headers.length; j++) {
-        row[headers[j]] = parts[j] !== undefined ? parts[j].trim() : null;
+        const val = parts[j] !== undefined ? parts[j].trim() : null;
+        row[headers[j]] = val;
       }
 
       rows.push(row);

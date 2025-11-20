@@ -1,38 +1,34 @@
-import { RawCSVRow, ParsedTransaction, SourceSystem } from "./types";
+import { RawCSVRow, MappedTransaction } from "./types";
 
 export class TransactionMapper {
-  mapRow(row: RawCSVRow, sourceSystem: SourceSystem): ParsedTransaction {
-    // Normalize date
-    const rawDate = String(row["date"] || "").trim();
-    const parsedDate = new Date(rawDate);
-    const isoDate = isNaN(parsedDate.getTime())
-      ? ""
-      : parsedDate.toISOString().split("T")[0];
+  mapRow(row: RawCSVRow): MappedTransaction {
+    const date = new Date(row["transaction_date"] ?? "");
+    const amount = Number(String(row["amount"]).replace(/[$,]/g, ""));
+    const transactionType = String(row["transaction_type"] ?? "").trim();
+    const acctNum = String(row["distribution_account"] ?? "").trim();
+    const acctName = String(row["account_full_name"] ?? "").trim();
+    
+    const desc = (
+      row["memo_description"] ?? row["name"] ?? ""
+    ).trim();
 
-    // Normalize amount
-    const rawAmount = String(row["amount"] || "").replace(/[$,]/g, "");
-    const amount = Number(rawAmount) || 0;
-
-    // Extract QB fields if present
-    const qbAccountNumber = (row["account"] || row["account number"] || row["qb account number"] || "") as string;
-    const qbAccountName = (row["account name"] || row["qb account name"] || "") as string;
-
-    // Generic description
-    const description =
-      (row["description"] as string) ||
-      (row["memo"] as string) ||
-      "";
+    const sourceId = [
+      row["transaction_date"],
+      transactionType,
+      amount,
+      row["name"] || "",
+    ].join("|");
 
     return {
-      date: isoDate,
+      date,
       amount,
-      description,
-      transaction_type: (row["type"] as string) || "",
-      source_system: sourceSystem,
-      source_id: (row["doc number"] as string) || "",
-      qb_account_number: qbAccountNumber.trim(),
-      qb_account_name: qbAccountName.trim(),
-      metadata: { ...row }
-    };
+      description: desc,
+      transaction_type: transactionType,
+      source_system: "quickbooks",
+      source_id: sourceId,
+      qb_account_number: acctNum,
+      qb_account_name: acctName,
+      metadata: {}, // Fixed: was just `{}` without being part of the object
+    }; // Fixed: missing closing brace and parenthesis
   }
 }

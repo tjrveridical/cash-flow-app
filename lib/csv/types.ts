@@ -1,8 +1,20 @@
 export type SourceSystem = "quickbooks" | "paylocity" | "pipedrive";
 
 export interface RawCSVRow {
-  [key: string]: string | number | null;
+  [key: string]: string | undefined;
 }
+
+export type MappedTransaction = {
+  date: Date;
+  amount: number;
+  description: string;
+  transaction_type: string;
+  source_system: SourceSystem;
+  source_id: string;
+  qb_account_number: string;
+  qb_account_name: string;
+  metadata: Record<string, any>;
+};
 
 export interface ParsedTransaction {
   date: string;
