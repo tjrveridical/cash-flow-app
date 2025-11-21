@@ -1,0 +1,1035 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cash Forecast - Cash Flow App</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', Inter, system-ui, sans-serif;
+            background: linear-gradient(135deg, #f8faf9 0%, #f5f7f6 100%);
+            color: #0f172a;
+            font-size: 13px;
+            line-height: 1.2;
+            letter-spacing: -0.014em;
+            font-feature-settings: "tnum" 1;
+        }
+
+        .header {
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.95) 0%, rgba(255, 255, 255, 0.9) 100%);
+            backdrop-filter: blur(20px);
+            border-bottom: 1px solid rgba(30, 58, 30, 0.08);
+            padding: 14px 24px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            box-shadow: 0 1px 0 0 rgba(30, 58, 30, 0.04), 0 2px 24px -8px rgba(30, 58, 30, 0.08);
+        }
+
+        .header h1 {
+            font-size: 22px;
+            font-weight: 650;
+            background: linear-gradient(135deg, #1e3a1e 0%, #2d5a2d 40%, #3d6b3d 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            letter-spacing: -0.02em;
+        }
+
+        .header-actions {
+            display: flex;
+            gap: 12px;
+            align-items: center;
+        }
+
+        .btn {
+            padding: 10px 16px;
+            border: 1px solid rgba(30, 58, 30, 0.1);
+            border-radius: 8px;
+            background: rgba(255, 255, 255, 0.8);
+            backdrop-filter: blur(12px);
+            cursor: pointer;
+            font-size: 12px;
+            color: #374151;
+            font-weight: 550;
+            transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .btn::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.4), transparent);
+            transition: left 0.6s;
+        }
+
+        .btn:hover::before {
+            left: 100%;
+        }
+
+        .btn:hover {
+            background: rgba(255, 255, 255, 0.95);
+            border-color: rgba(30, 58, 30, 0.15);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(30, 58, 30, 0.08), 0 1px 0 rgba(255, 255, 255, 0.5) inset;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #2d5a2d 0%, #3d6b3d 100%);
+            border-color: #2d5a2d;
+            color: white;
+            box-shadow: 0 1px 0 rgba(255, 255, 255, 0.1) inset;
+        }
+
+        .btn-primary:hover {
+            background: linear-gradient(135deg, #1e3a1e 0%, #2d5a2d 100%);
+            transform: translateY(-1px);
+            box-shadow: 0 6px 20px rgba(45, 90, 45, 0.2), 0 1px 0 rgba(255, 255, 255, 0.15) inset;
+        }
+
+        .role-info {
+            background: linear-gradient(135deg, #1e3a1e 0%, #2d5a2d 100%);
+            color: rgba(255, 255, 255, 0.9);
+            padding: 6px 12px;
+            border-radius: 6px;
+            font-size: 11px;
+            font-weight: 600;
+            letter-spacing: 0.02em;
+            box-shadow: 0 2px 4px rgba(30, 58, 30, 0.2);
+        }
+
+        .main-content {
+            padding: 0;
+        }
+
+        .controls-bar {
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.95) 0%, rgba(255, 255, 255, 0.9) 100%);
+            backdrop-filter: blur(24px);
+            border-bottom: 1px solid rgba(30, 58, 30, 0.08);
+            padding: 12px 24px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 11px;
+        }
+
+        .view-controls {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+        }
+
+        .filter-chip {
+            background: rgba(255, 255, 255, 0.7);
+            padding: 6px 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            border: 1px solid rgba(30, 58, 30, 0.08);
+            font-weight: 550;
+            color: #475569;
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            text-transform: uppercase;
+            letter-spacing: 0.03em;
+            font-size: 10px;
+        }
+
+        .filter-chip:hover {
+            background: rgba(255, 255, 255, 0.9);
+            border-color: rgba(30, 58, 30, 0.15);
+            transform: translateY(-1px);
+        }
+
+        .filter-chip.active {
+            background: linear-gradient(135deg, #2d5a2d 0%, #3d6b3d 100%);
+            color: white;
+            border-color: #2d5a2d;
+            box-shadow: 0 2px 8px rgba(45, 90, 45, 0.3);
+        }
+
+        .status-text {
+            color: #64748b;
+            font-weight: 500;
+        }
+
+        .forecast-table-container {
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.95) 0%, rgba(255, 255, 255, 0.9) 100%);
+            backdrop-filter: blur(24px);
+            border-radius: 12px;
+            border: 1px solid rgba(30, 58, 30, 0.08);
+            margin: 16px 24px;
+            box-shadow: 0 4px 24px rgba(30, 58, 30, 0.04), 0 1px 0 rgba(255, 255, 255, 0.5) inset;
+            overflow: hidden;
+        }
+
+        .forecast-table {
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 0;
+            font-size: 12px;
+        }
+
+        .week-header {
+            background: linear-gradient(135deg, #1e3a1e 0%, #2d5a2d 100%);
+            color: white;
+        }
+
+        .week-header th {
+            padding: 12px 8px;
+            text-align: center;
+            border-right: 1px solid rgba(255, 255, 255, 0.15);
+            font-weight: 600;
+            font-size: 11px;
+            letter-spacing: 0.025em;
+            text-transform: uppercase;
+            position: relative;
+            cursor: pointer;
+            user-select: none;
+            transition: all 0.2s ease;
+            height: 44px;
+        }
+
+        .week-header th:hover {
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.1) 0%, rgba(255, 255, 255, 0.05) 100%);
+        }
+
+        .week-header th:first-child {
+            text-align: left;
+            width: 180px;
+            background: linear-gradient(135deg, #0f172a 0%, #1e3a1e 100%);
+            cursor: pointer;
+        }
+
+        .week-header th:first-child::after {
+            content: 'â‡…';
+            position: absolute;
+            right: 8px;
+            top: 50%;
+            transform: translateY(-50%);
+            opacity: 0.6;
+            font-size: 14px;
+            transition: all 0.2s ease;
+        }
+
+        .week-header th:first-child:hover::after {
+            opacity: 1;
+        }
+
+        .week-header th:first-child.sort-asc::after {
+            content: 'â†‘';
+            opacity: 1;
+        }
+
+        .week-header th:first-child.sort-desc::after {
+            content: 'â†“';
+            opacity: 1;
+        }
+
+        .week-header th:last-child {
+            border-right: none;
+        }
+
+        .week-dates {
+            background: linear-gradient(135deg, rgba(248, 250, 249, 0.9) 0%, rgba(248, 250, 249, 0.7) 100%);
+            border-bottom: 1px solid rgba(30, 58, 30, 0.08);
+        }
+
+        .week-dates td {
+            padding: 8px;
+            text-align: center;
+            border-right: 1px solid rgba(30, 58, 30, 0.06);
+            font-size: 10px;
+            color: #64748b;
+            font-weight: 500;
+            height: 32px;
+        }
+
+        .week-dates td:first-child {
+            text-align: left;
+            font-weight: 600;
+            color: #475569;
+            background: linear-gradient(135deg, rgba(241, 245, 249, 0.9) 0%, rgba(241, 245, 249, 0.7) 100%);
+        }
+
+        .week-dates td:last-child {
+            border-right: none;
+        }
+
+        .data-row {
+            border-bottom: 1px solid rgba(30, 58, 30, 0.04);
+            transition: all 0.15s ease;
+        }
+
+        .data-row:hover {
+            background: linear-gradient(135deg, rgba(240, 248, 242, 0.4) 0%, rgba(240, 248, 242, 0.2) 100%);
+        }
+
+        .data-row td {
+            padding: 8px;
+            border-right: 1px solid rgba(30, 58, 30, 0.04);
+            text-align: right;
+            white-space: nowrap;
+            font-weight: 500;
+            background: rgba(255, 255, 255, 0.8);
+            height: 36px;
+            vertical-align: middle;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            position: relative;
+        }
+
+        .data-row td:first-child {
+            text-align: left;
+            font-weight: 600;
+            color: #374151;
+            border-right: 1px solid rgba(30, 58, 30, 0.08);
+            background: linear-gradient(135deg, rgba(250, 250, 250, 0.9) 0%, rgba(250, 250, 250, 0.7) 100%);
+            cursor: help;
+        }
+
+        .data-row td:first-child:hover {
+            color: #2d5a2d;
+        }
+
+        .data-row td:last-child {
+            border-right: none;
+        }
+
+        .section-header {
+            background: linear-gradient(135deg, rgba(45, 90, 45, 0.08) 0%, rgba(45, 90, 45, 0.04) 100%);
+            font-weight: 700;
+            color: #1e3a1e;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            font-size: 11px;
+            border-left: 3px solid;
+        }
+
+        .section-header.cash-balance {
+            border-left-color: #1e3a1e;
+        }
+
+        .section-header.cash-inflows {
+            border-left-color: #2d5a2d;
+        }
+
+        .section-header.labor {
+            border-left-color: #3d6b3d;
+        }
+
+        .section-header.cogs {
+            border-left-color: #4a7c4a;
+        }
+
+        .section-header.opex {
+            border-left-color: #5e8e5e;
+        }
+
+        .section-header td {
+            padding: 12px 8px;
+            border-right: 1px solid rgba(30, 58, 30, 0.08);
+            text-align: left;
+            height: 40px;
+        }
+
+        .section-header td:last-child {
+            border-right: none;
+        }
+
+        .total-row {
+            background: linear-gradient(135deg, rgba(248, 250, 249, 0.9) 0%, rgba(248, 250, 249, 0.7) 100%);
+            font-weight: 700;
+            border-top: 2px solid rgba(45, 90, 45, 0.2);
+            border-bottom: 2px solid rgba(45, 90, 45, 0.2);
+        }
+
+        .total-row td {
+            padding: 10px 8px;
+            border-right: 1px solid rgba(30, 58, 30, 0.08);
+            font-weight: 700;
+            height: 40px;
+        }
+
+        .total-row td:last-child {
+            border-right: none;
+        }
+
+        .amount-positive {
+            color: #059669;
+            font-weight: 600;
+        }
+
+        .amount-negative {
+            color: #dc2626;
+            font-weight: 600;
+        }
+
+        .amount-actual {
+            font-weight: 700;
+            color: #0f172a;
+        }
+
+        .amount-forecast {
+            color: #3b82f6;
+            font-style: italic;
+            font-weight: 500;
+        }
+
+        .clickable-amount {
+            cursor: pointer;
+            text-decoration: underline;
+            text-decoration-color: rgba(59, 130, 246, 0.4);
+            transition: all 0.2s ease;
+        }
+
+        .clickable-amount:hover {
+            text-decoration-color: #3b82f6;
+            background: linear-gradient(135deg, rgba(240, 249, 255, 0.8) 0%, rgba(240, 249, 255, 0.4) 100%);
+            border-radius: 4px;
+        }
+
+        .current-week {
+            background: linear-gradient(135deg, #475569 0%, #64748b 100%) !important;
+            color: white !important;
+            position: relative;
+        }
+
+        .current-week::after {
+            content: "";
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: linear-gradient(90deg, #3b82f6 0%, #2563eb 100%);
+        }
+
+        .detail-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(15, 23, 42, 0.7);
+            backdrop-filter: blur(8px);
+            z-index: 1000;
+            display: none;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal-content {
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.95) 0%, rgba(255, 255, 255, 0.9) 100%);
+            backdrop-filter: blur(24px);
+            border-radius: 16px;
+            padding: 28px;
+            max-width: 700px;
+            width: 90%;
+            max-height: 80%;
+            overflow-y: auto;
+            box-shadow: 0 20px 40px rgba(30, 58, 30, 0.15), 0 8px 16px rgba(30, 58, 30, 0.08);
+            border: 1px solid rgba(30, 58, 30, 0.08);
+        }
+
+        .modal-header {
+            border-bottom: 1px solid rgba(30, 58, 30, 0.08);
+            padding-bottom: 16px;
+            margin-bottom: 24px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .modal-header h3 {
+            font-size: 20px;
+            font-weight: 650;
+            color: #1e3a1e;
+        }
+
+        .close-btn {
+            background: none;
+            border: none;
+            font-size: 28px;
+            cursor: pointer;
+            color: #64748b;
+            transition: color 0.2s ease;
+            padding: 4px;
+            border-radius: 4px;
+        }
+
+        .close-btn:hover {
+            color: #dc2626;
+            background: rgba(220, 38, 38, 0.05);
+        }
+
+        .tooltip {
+            position: relative;
+        }
+
+        .tooltip::after {
+            content: attr(data-tooltip);
+            position: absolute;
+            bottom: 100%;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(15, 23, 42, 0.95);
+            color: white;
+            padding: 8px 12px;
+            border-radius: 6px;
+            font-size: 11px;
+            white-space: nowrap;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.2s ease;
+            z-index: 1000;
+            backdrop-filter: blur(12px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            margin-bottom: 8px;
+        }
+
+        .tooltip:hover::after {
+            opacity: 1;
+        }
+
+        /* Scrollbar styling */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: rgba(30, 58, 30, 0.05);
+            border-radius: 3px;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: rgba(30, 58, 30, 0.2);
+            border-radius: 3px;
+            transition: background 0.2s ease;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: rgba(30, 58, 30, 0.3);
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>14-Week Cash Forecast</h1>
+        <div class="header-actions">
+            <button class="btn">Export Excel</button>
+            <button class="btn">Update Rules</button>
+            <button class="btn btn-primary">Regenerate</button>
+            <div class="role-info">CFO | Last updated: Nov 20 10:30 AM</div>
+        </div>
+    </div>
+
+    <div class="controls-bar">
+        <div class="view-controls">
+            <span class="filter-chip active">14 Weeks</span>
+            <span class="filter-chip">4 Weeks</span>
+            <span class="filter-chip">26 Weeks</span>
+            <span style="margin-left: 12px; color: #666;">|</span>
+            <span class="filter-chip">Show Variance</span>
+            <span class="filter-chip">Show Rules</span>
+        </div>
+        <div class="status-text">
+            Weekly forecast â€¢ 23 pending verifications â€¢ 8 vendors need rules
+        </div>
+    </div>
+
+    <div class="main-content">
+        <div class="forecast-table-container">
+            <table class="forecast-table">
+                <thead>
+                    <tr class="week-header">
+                        <th class="sortable" data-sort="category">Cash Flow Item</th>
+                        <th>Week 47</th>
+                        <th>Week 48</th>
+                        <th class="current-week">Week 49</th>
+                        <th>Week 50</th>
+                        <th>Week 51</th>
+                        <th>Week 52</th>
+                        <th>Week 1</th>
+                        <th>Week 2</th>
+                        <th>Week 3</th>
+                        <th>Week 4</th>
+                        <th>Week 5</th>
+                        <th>Week 6</th>
+                        <th>Week 7</th>
+                        <th>Week 8</th>
+                    </tr>
+                    <tr class="week-dates">
+                        <td></td>
+                        <td>11/18/24</td>
+                        <td>11/25/24</td>
+                        <td class="current-week">12/02/24</td>
+                        <td>12/09/24</td>
+                        <td>12/16/24</td>
+                        <td>12/23/24</td>
+                        <td>12/30/24</td>
+                        <td>01/06/25</td>
+                        <td>01/13/25</td>
+                        <td>01/20/25</td>
+                        <td>01/27/25</td>
+                        <td>02/03/25</td>
+                        <td>02/10/25</td>
+                        <td>02/17/25</td>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr class="section-header cash-balance">
+                        <td colspan="15">CASH BALANCE</td>
+                    </tr>
+                    <tr class="data-row total-row">
+                        <td class="tooltip" data-tooltip="Starting cash position for each period">Beginning Cash</td>
+                        <td class="amount-actual amount-positive">$487,250</td>
+                        <td class="amount-actual amount-positive">$499,700</td>
+                        <td class="amount-forecast amount-positive">$470,950</td>
+                        <td class="amount-forecast amount-positive">$448,303</td>
+                        <td class="amount-forecast amount-positive">$493,303</td>
+                        <td class="amount-forecast amount-positive">$517,403</td>
+                        <td class="amount-forecast amount-positive">$504,553</td>
+                        <td class="amount-forecast amount-positive">$537,053</td>
+                        <td class="amount-forecast amount-positive">$569,553</td>
+                        <td class="amount-forecast amount-positive">$602,053</td>
+                        <td class="amount-forecast amount-positive">$634,553</td>
+                        <td class="amount-forecast amount-positive">$667,053</td>
+                        <td class="amount-forecast amount-positive">$699,553</td>
+                        <td class="amount-forecast amount-positive">$732,053</td>
+                    </tr>
+
+                    <tr class="section-header cash-inflows">
+                        <td colspan="15">CASH INFLOWS</td>
+                    </tr>
+                    <tr class="data-row">
+                        <td class="tooltip" data-tooltip="Expected customer payments based on AR forecast and historical patterns">
+                            AR Collections
+                        </td>
+                        <td class="amount-actual amount-positive clickable-amount" onclick="showDetail('AR Week 47', '$85,000')">$85,000</td>
+                        <td class="amount-forecast amount-positive clickable-amount" onclick="showDetail('AR Week 48', '$89,250')">$89,250</td>
+                        <td class="amount-forecast amount-positive clickable-amount" onclick="showDetail('AR Week 49', '$76,400')">$76,400</td>
+                        <td class="amount-forecast amount-positive clickable-amount" onclick="showDetail('AR Week 50', '$94,750')">$94,750</td>
+                        <td class="amount-forecast amount-positive clickable-amount" onclick="showDetail('AR Week 51', '$52,450')">$52,450</td>
+                        <td class="amount-forecast amount-positive clickable-amount" onclick="showDetail('AR Week 52', '$68,200')">$68,200</td>
+                        <td class="amount-forecast amount-positive">$75,000</td>
+                        <td class="amount-forecast amount-positive">$82,500</td>
+                        <td class="amount-forecast amount-positive">$78,000</td>
+                        <td class="amount-forecast amount-positive">$85,500</td>
+                        <td class="amount-forecast amount-positive">$72,000</td>
+                        <td class="amount-forecast amount-positive">$89,500</td>
+                        <td class="amount-forecast amount-positive">$91,200</td>
+                        <td class="amount-forecast amount-positive">$77,800</td>
+                    </tr>
+                    <tr class="data-row">
+                        <td class="tooltip" data-tooltip="Miscellaneous revenue, grants, interest income">
+                            Other Revenue
+                        </td>
+                        <td class="amount-actual">$0</td>
+                        <td class="amount-forecast">$0</td>
+                        <td class="amount-forecast">$0</td>
+                        <td class="amount-forecast amount-positive">$25,000</td>
+                        <td class="amount-forecast">$0</td>
+                        <td class="amount-forecast">$0</td>
+                        <td class="amount-forecast">$0</td>
+                        <td class="amount-forecast">$0</td>
+                        <td class="amount-forecast">$0</td>
+                        <td class="amount-forecast">$0</td>
+                        <td class="amount-forecast">$0</td>
+                        <td class="amount-forecast">$0</td>
+                        <td class="amount-forecast">$0</td>
+                        <td class="amount-forecast">$0</td>
+                    </tr>
+                    <tr class="data-row total-row">
+                        <td>Total Inflows</td>
+                        <td class="amount-actual amount-positive">$85,000</td>
+                        <td class="amount-forecast amount-positive">$89,250</td>
+                        <td class="amount-forecast amount-positive">$76,400</td>
+                        <td class="amount-forecast amount-positive">$119,750</td>
+                        <td class="amount-forecast amount-positive">$52,450</td>
+                        <td class="amount-forecast amount-positive">$68,200</td>
+                        <td class="amount-forecast amount-positive">$75,000</td>
+                        <td class="amount-forecast amount-positive">$82,500</td>
+                        <td class="amount-forecast amount-positive">$78,000</td>
+                        <td class="amount-forecast amount-positive">$85,500</td>
+                        <td class="amount-forecast amount-positive">$72,000</td>
+                        <td class="amount-forecast amount-positive">$89,500</td>
+                        <td class="amount-forecast amount-positive">$91,200</td>
+                        <td class="amount-forecast amount-positive">$77,800</td>
+                    </tr>
+
+                    <tr class="section-header labor">
+                        <td colspan="15">LABOR</td>
+                    </tr>
+                    <tr class="data-row">
+                        <td class="tooltip" data-tooltip="Weekly payroll - obligatory payment every Friday">
+                            Payroll
+                        </td>
+                        <td class="amount-actual amount-negative">($28,750)</td>
+                        <td class="amount-forecast amount-negative clickable-amount" onclick="showDetail('Payroll Week 48', '$32,500')">($32,500)</td>
+                        <td class="amount-forecast amount-negative clickable-amount" onclick="showDetail('Payroll Week 49', '$32,500')">($32,500)</td>
+                        <td class="amount-forecast amount-negative">($32,500)</td>
+                        <td class="amount-forecast amount-negative">($32,500)</td>
+                        <td class="amount-forecast amount-negative">($32,500)</td>
+                        <td class="amount-forecast amount-negative">($32,500)</td>
+                        <td class="amount-forecast amount-negative">($32,500)</td>
+                        <td class="amount-forecast amount-negative">($32,500)</td>
+                        <td class="amount-forecast amount-negative">($32,500)</td>
+                        <td class="amount-forecast amount-negative">($32,500)</td>
+                        <td class="amount-forecast amount-negative">($32,500)</td>
+                        <td class="amount-forecast amount-negative">($32,500)</td>
+                        <td class="amount-forecast amount-negative">($32,500)</td>
+                    </tr>
+                    <tr class="data-row">
+                        <td class="tooltip" data-tooltip="Employee benefits, taxes, and related payroll costs">Benefits & Taxes</td>
+                        <td class="amount-actual amount-negative">($8,450)</td>
+                        <td class="amount-forecast amount-negative">($9,200)</td>
+                        <td class="amount-forecast amount-negative">($9,200)</td>
+                        <td class="amount-forecast amount-negative">($9,200)</td>
+                        <td class="amount-forecast amount-negative">($9,200)</td>
+                        <td class="amount-forecast amount-negative">($9,200)</td>
+                        <td class="amount-forecast amount-negative">($9,200)</td>
+                        <td class="amount-forecast amount-negative">($9,200)</td>
+                        <td class="amount-forecast amount-negative">($9,200)</td>
+                        <td class="amount-forecast amount-negative">($9,200)</td>
+                        <td class="amount-forecast amount-negative">($9,200)</td>
+                        <td class="amount-forecast amount-negative">($9,200)</td>
+                        <td class="amount-forecast amount-negative">($9,200)</td>
+                        <td class="amount-forecast amount-negative">($9,200)</td>
+                    </tr>
+
+                    <tr class="section-header cogs">
+                        <td colspan="15">COGS</td>
+                    </tr>
+                    <tr class="data-row">
+                        <td class="tooltip" data-tooltip="Nurse call equipment, LiNK hardware components">
+                            Hardware
+                        </td>
+                        <td class="amount-actual amount-negative">($12,450)</td>
+                        <td class="amount-forecast">$0</td>
+                        <td class="amount-forecast amount-negative">($15,200)</td>
+                        <td class="amount-forecast">$0</td>
+                        <td class="amount-forecast amount-negative">($18,500)</td>
+                        <td class="amount-forecast">$0</td>
+                        <td class="amount-forecast">$0</td>
+                        <td class="amount-forecast amount-negative">($22,000)</td>
+                        <td class="amount-forecast">$0</td>
+                        <td class="amount-forecast">$0</td>
+                        <td class="amount-forecast amount-negative">($19,800)</td>
+                        <td class="amount-forecast">$0</td>
+                        <td class="amount-forecast">$0</td>
+                        <td class="amount-forecast amount-negative">($16,400)</td>
+                    </tr>
+                    <tr class="data-row">
+                        <td class="tooltip" data-tooltip="Software licenses, subscriptions, development tools">
+                            Software
+                        </td>
+                        <td class="amount-actual">$0</td>
+                        <td class="amount-forecast amount-negative clickable-amount" onclick="showDetail('Software Week 48', '$15,600')">($15,600)</td>
+                        <td class="amount-forecast">$0</td>
+                        <td class="amount-forecast">$0</td>
+                        <td class="amount-forecast amount-negative">($15,600)</td>
+                        <td class="amount-forecast">$0</td>
+                        <td class="amount-forecast">$0</td>
+                        <td class="amount-forecast amount-negative">($15,600)</td>
+                        <td class="amount-forecast">$0</td>
+                        <td class="amount-forecast">$0</td>
+                        <td class="amount-forecast amount-negative">($15,600)</td>
+                        <td class="amount-forecast">$0</td>
+                        <td class="amount-forecast">$0</td>
+                        <td class="amount-forecast amount-negative">($15,600)</td>
+                    </tr>
+
+                    <tr class="section-header opex">
+                        <td colspan="15">OPEX</td>
+                    </tr>
+                    <tr class="data-row">
+                        <td class="tooltip" data-tooltip="Office space rent and facilities costs">Rent</td>
+                        <td class="amount-actual">$0</td>
+                        <td class="amount-forecast amount-negative">($8,400)</td>
+                        <td class="amount-forecast amount-negative">($8,400)</td>
+                        <td class="amount-forecast amount-negative">($8,400)</td>
+                        <td class="amount-forecast amount-negative">($8,400)</td>
+                        <td class="amount-forecast amount-negative">($8,400)</td>
+                        <td class="amount-forecast amount-negative">($8,400)</td>
+                        <td class="amount-forecast amount-negative">($8,400)</td>
+                        <td class="amount-forecast amount-negative">($8,400)</td>
+                        <td class="amount-forecast amount-negative">($8,400)</td>
+                        <td class="amount-forecast amount-negative">($8,400)</td>
+                        <td class="amount-forecast amount-negative">($8,400)</td>
+                        <td class="amount-forecast amount-negative">($8,400)</td>
+                        <td class="amount-forecast amount-negative">($8,400)</td>
+                    </tr>
+                    <tr class="data-row">
+                        <td class="tooltip" data-tooltip="General business insurance premiums">Insurance</td>
+                        <td class="amount-actual amount-negative">($4,200)</td>
+                        <td class="amount-forecast">$0</td>
+                        <td class="amount-forecast amount-negative">($4,200)</td>
+                        <td class="amount-forecast">$0</td>
+                        <td class="amount-forecast amount-negative">($4,200)</td>
+                        <td class="amount-forecast">$0</td>
+                        <td class="amount-forecast amount-negative">($4,200)</td>
+                        <td class="amount-forecast">$0</td>
+                        <td class="amount-forecast amount-negative">($4,200)</td>
+                        <td class="amount-forecast">$0</td>
+                        <td class="amount-forecast amount-negative">($4,200)</td>
+                        <td class="amount-forecast">$0</td>
+                        <td class="amount-forecast amount-negative">($4,200)</td>
+                        <td class="amount-forecast">$0</td>
+                    </tr>
+                    <tr class="data-row">
+                        <td class="tooltip" data-tooltip="Electricity, water, gas, and other utilities">Utilities</td>
+                        <td class="amount-actual">$0</td>
+                        <td class="amount-forecast">$0</td>
+                        <td class="amount-forecast amount-negative">($2,850)</td>
+                        <td class="amount-forecast">$0</td>
+                        <td class="amount-forecast">$0</td>
+                        <td class="amount-forecast amount-negative">($2,850)</td>
+                        <td class="amount-forecast">$0</td>
+                        <td class="amount-forecast">$0</td>
+                        <td class="amount-forecast amount-negative">($2,850)</td>
+                        <td class="amount-forecast">$0</td>
+                        <td class="amount-forecast">$0</td>
+                        <td class="amount-forecast amount-negative">($2,850)</td>
+                        <td class="amount-forecast">$0</td>
+                        <td class="amount-forecast">$0</td>
+                    </tr>
+                    <tr class="data-row">
+                        <td class="tooltip" data-tooltip="Cloud infrastructure, software subscriptions, IT support">IT Services</td>
+                        <td class="amount-actual amount-negative">($2,847)</td>
+                        <td class="amount-forecast amount-negative">($3,200)</td>
+                        <td class="amount-forecast amount-negative">($3,200)</td>
+                        <td class="amount-forecast amount-negative">($3,200)</td>
+                        <td class="amount-forecast amount-negative">($3,200)</td>
+                        <td class="amount-forecast amount-negative">($3,200)</td>
+                        <td class="amount-forecast amount-negative">($3,200)</td>
+                        <td class="amount-forecast amount-negative">($3,200)</td>
+                        <td class="amount-forecast amount-negative">($3,200)</td>
+                        <td class="amount-forecast amount-negative">($3,200)</td>
+                        <td class="amount-forecast amount-negative">($3,200)</td>
+                        <td class="amount-forecast amount-negative">($3,200)</td>
+                        <td class="amount-forecast amount-negative">($3,200)</td>
+                        <td class="amount-forecast amount-negative">($3,200)</td>
+                    </tr>
+
+                    <tr class="data-row total-row">
+                        <td>Total Outflows</td>
+                        <td class="amount-actual amount-negative">($56,697)</td>
+                        <td class="amount-forecast amount-negative">($68,900)</td>
+                        <td class="amount-forecast amount-negative">($76,350)</td>
+                        <td class="amount-forecast amount-negative">($53,300)</td>
+                        <td class="amount-forecast amount-negative">($90,400)</td>
+                        <td class="amount-forecast amount-negative">($56,150)</td>
+                        <td class="amount-forecast amount-negative">($57,500)</td>
+                        <td class="amount-forecast amount-negative">($90,900)</td>
+                        <td class="amount-forecast amount-negative">($60,350)</td>
+                        <td class="amount-forecast amount-negative">($53,300)</td>
+                        <td class="amount-forecast amount-negative">($93,900)</td>
+                        <td class="amount-forecast amount-negative">($56,150)</td>
+                        <td class="amount-forecast amount-negative">($57,500)</td>
+                        <td class="amount-forecast amount-negative">($85,300)</td>
+                    </tr>
+
+                    <tr class="data-row total-row">
+                        <td class="tooltip" data-tooltip="Net change in cash position for each period">Net Cash Flow</td>
+                        <td class="amount-actual amount-positive">$28,303</td>
+                        <td class="amount-forecast amount-positive">$20,350</td>
+                        <td class="amount-forecast amount-positive">$50</td>
+                        <td class="amount-forecast amount-positive">$66,450</td>
+                        <td class="amount-forecast amount-negative">($37,950)</td>
+                        <td class="amount-forecast amount-positive">$12,050</td>
+                        <td class="amount-forecast amount-positive">$17,500</td>
+                        <td class="amount-forecast amount-negative">($8,400)</td>
+                        <td class="amount-forecast amount-positive">$17,650</td>
+                        <td class="amount-forecast amount-positive">$32,200</td>
+                        <td class="amount-forecast amount-negative">($21,900)</td>
+                        <td class="amount-forecast amount-positive">$33,350</td>
+                        <td class="amount-forecast amount-positive">$33,700</td>
+                        <td class="amount-forecast amount-negative">($7,500)</td>
+                    </tr>
+
+                    <tr class="data-row total-row">
+                        <td class="tooltip" data-tooltip="Projected cash balance at end of each period">Ending Cash</td>
+                        <td class="amount-actual amount-positive">$515,553</td>
+                        <td class="amount-forecast amount-positive">$520,050</td>
+                        <td class="amount-forecast amount-positive">$471,000</td>
+                        <td class="amount-forecast amount-positive">$514,753</td>
+                        <td class="amount-forecast amount-positive">$455,353</td>
+                        <td class="amount-forecast amount-positive">$529,553</td>
+                        <td class="amount-forecast amount-positive">$522,053</td>
+                        <td class="amount-forecast amount-positive">$619,553</td>
+                        <td class="amount-forecast amount-positive">$587,203</td>
+                        <td class="amount-forecast amount-positive">$634,553</td>
+                        <td class="amount-forecast amount-positive">$645,653</td>
+                        <td class="amount-forecast amount-positive">$756,553</td>
+                        <td class="amount-forecast amount-positive">$732,253</td>
+                        <td class="amount-forecast amount-positive">$802,353</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Detail Modal -->
+    <div class="detail-modal" id="detailModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="modalTitle">Payment Details</h3>
+                <button class="close-btn" onclick="closeModal()">Ã—</button>
+            </div>
+            <div id="modalContent">
+                <!-- Dynamic content will be inserted here -->
+            </div>
+            <div style="margin-top: 20px; text-align: right;">
+                <button class="btn" onclick="closeModal()">Close</button>
+                <button class="btn btn-primary">Edit Rule</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Sorting functionality for row labels
+        document.querySelector('th[data-sort="category"]').addEventListener('click', function() {
+            const currentSort = this.classList.contains('sort-asc') ? 'asc' : 
+                               this.classList.contains('sort-desc') ? 'desc' : 'none';
+            
+            this.classList.remove('sort-asc', 'sort-desc');
+            
+            if (currentSort === 'none' || currentSort === 'desc') {
+                this.classList.add('sort-asc');
+                sortTable('asc');
+            } else {
+                this.classList.add('sort-desc');
+                sortTable('desc');
+            }
+        });
+
+        function sortTable(order) {
+            const tbody = document.querySelector('tbody');
+            const sections = [];
+            let currentSection = null;
+            
+            // Group rows by sections
+            Array.from(tbody.children).forEach(row => {
+                if (row.classList.contains('section-header')) {
+                    if (currentSection) sections.push(currentSection);
+                    currentSection = { header: row, rows: [] };
+                } else if (currentSection) {
+                    currentSection.rows.push(row);
+                }
+            });
+            if (currentSection) sections.push(currentSection);
+            
+            // Sort sections by header text
+            sections.sort((a, b) => {
+                const textA = a.header.textContent.trim();
+                const textB = b.header.textContent.trim();
+                return order === 'asc' ? textA.localeCompare(textB) : textB.localeCompare(textA);
+            });
+            
+            // Rebuild table
+            tbody.innerHTML = '';
+            sections.forEach(section => {
+                tbody.appendChild(section.header);
+                section.rows.forEach(row => tbody.appendChild(row));
+            });
+        }
+
+        // Filter functionality
+        document.querySelectorAll('.filter-chip').forEach(chip => {
+            chip.addEventListener('click', function() {
+                const parent = this.parentNode;
+                parent.querySelectorAll('.filter-chip').forEach(c => c.classList.remove('active'));
+                this.classList.add('active');
+                
+                console.log(`Filtering by: ${this.textContent}`);
+            });
+        });
+
+        // Modal functionality
+        function showDetail(title, amount) {
+            const modal = document.getElementById('detailModal');
+            const modalTitle = document.getElementById('modalTitle');
+            const modalContent = document.getElementById('modalContent');
+            
+            modalTitle.textContent = title;
+            
+            let content = '';
+            if (title.includes('Payroll')) {
+                content = `
+                    <div style="margin-bottom: 20px;">
+                        <h4 style="margin-bottom: 12px; color: #1e3a1e; font-weight: 650; font-size: 16px;">Payment Rule</h4>
+                        <div style="background: linear-gradient(135deg, rgba(248, 250, 249, 0.6) 0%, rgba(248, 250, 249, 0.4) 100%); padding: 16px; border-radius: 8px; border: 1px solid rgba(30, 58, 30, 0.08);">
+                            <div style="margin-bottom: 8px; color: #475569; font-size: 13px;"><strong style="color: #1e3a1e;">Frequency:</strong> Weekly (Friday)</div>
+                            <div style="margin-bottom: 8px; color: #475569; font-size: 13px;"><strong style="color: #1e3a1e;">Type:</strong> Obligatory</div>
+                            <div style="margin-bottom: 8px; color: #475569; font-size: 13px;"><strong style="color: #1e3a1e;">Amount Basis:</strong> 8-week median</div>
+                        </div>
+                    </div>
+                    <div>
+                        <h4 style="margin-bottom: 12px; color: #1e3a1e; font-weight: 650; font-size: 16px;">Historical Payments</h4>
+                        <div style="background: linear-gradient(135deg, rgba(248, 250, 249, 0.6) 0%, rgba(248, 250, 249, 0.4) 100%); padding: 16px; border-radius: 8px; border: 1px solid rgba(30, 58, 30, 0.08);">
+                            <div style="margin-bottom: 8px; color: #475569; font-size: 13px;">Nov 15: <strong style="color: #059669;">$32,750</strong></div>
+                            <div style="margin-bottom: 8px; color: #475569; font-size: 13px;">Nov 8: <strong style="color: #059669;">$32,100</strong></div>
+                            <div style="margin-bottom: 8px; color: #475569; font-size: 13px;">Nov 1: <strong style="color: #059669;">$33,200</strong></div>
+                            <div style="color: #475569; font-size: 13px;">Oct 25: <strong style="color: #059669;">$31,950</strong></div>
+                        </div>
+                    </div>
+                `;
+            } else if (title.includes('AR')) {
+                content = `
+                    <div style="margin-bottom: 20px;">
+                        <h4 style="margin-bottom: 12px; color: #1e3a1e; font-weight: 650; font-size: 16px;">Expected Customers</h4>
+                        <div style="background: linear-gradient(135deg, rgba(248, 250, 249, 0.6) 0%, rgba(248, 250, 249, 0.4) 100%); padding: 16px; border-radius: 8px; border: 1px solid rgba(30, 58, 30, 0.08);">
+                            <div style="margin-bottom: 8px; color: #475569; font-size: 13px;">City Hospital: <strong style="color: #059669;">$45,000</strong> <span style="color: #3b82f6; font-size: 11px;">(High confidence)</span></div>
+                            <div style="margin-bottom: 8px; color: #475569; font-size: 13px;">Regional Medical: <strong style="color: #059669;">$32,500</strong> <span style="color: #3b82f6; font-size: 11px;">(High confidence)</span></div>
+                            <div style="color: #475569; font-size: 13px;">Metro Health: <strong style="color: #059669;">$11,750</strong> <span style="color: #f59e0b; font-size: 11px;">(Medium confidence)</span></div>
+                        </div>
+                    </div>
+                `;
+            } else {
+                content = `
+                    <div style="background: linear-gradient(135deg, rgba(248, 250, 249, 0.6) 0%, rgba(248, 250, 249, 0.4) 100%); padding: 16px; border-radius: 8px; border: 1px solid rgba(30, 58, 30, 0.08); color: #475569;">
+                        Payment details and rule information for <strong style="color: #1e3a1e;">${title}</strong>
+                    </div>
+                `;
+            }
+            
+            modalContent.innerHTML = content;
+            modal.style.display = 'flex';
+        }
+        
+        function closeModal() {
+            document.getElementById('detailModal').style.display = 'none';
+        }
+        
+        // Close modal when clicking outside
+        window.onclick = function(event) {
+            const modal = document.getElementById('detailModal');
+            if (event.target == modal) {
+                closeModal();
+            }
+        }
+
+        // Double-click for detailed modal view
+        document.querySelectorAll('.data-row td:first-child').forEach(cell => {
+            cell.addEventListener('dblclick', function() {
+                const title = this.textContent.trim();
+                showDetail(title, '');
+            });
+        });
+    </script>
+</body>
+</html>

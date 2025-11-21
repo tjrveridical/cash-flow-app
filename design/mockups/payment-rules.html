@@ -1,0 +1,1079 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Payment Rules - Cash Flow App</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', Inter, system-ui, sans-serif;
+            background: linear-gradient(135deg, #f8faf9 0%, #f5f7f6 100%);
+            color: #0f172a;
+            font-size: 13px;
+            line-height: 1.2;
+            letter-spacing: -0.014em;
+            font-feature-settings: "tnum" 1;
+        }
+
+        .header {
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.95) 0%, rgba(255, 255, 255, 0.9) 100%);
+            backdrop-filter: blur(20px);
+            border-bottom: 1px solid rgba(30, 58, 30, 0.08);
+            padding: 14px 24px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            box-shadow: 0 1px 0 0 rgba(30, 58, 30, 0.04), 0 2px 24px -8px rgba(30, 58, 30, 0.08);
+        }
+
+        .header h1 {
+            font-size: 22px;
+            font-weight: 650;
+            background: linear-gradient(135deg, #1e3a1e 0%, #2d5a2d 40%, #3d6b3d 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            letter-spacing: -0.02em;
+        }
+
+        .header-actions {
+            display: flex;
+            gap: 12px;
+            align-items: center;
+        }
+
+        .btn {
+            padding: 10px 16px;
+            border: 1px solid rgba(30, 58, 30, 0.1);
+            border-radius: 8px;
+            background: rgba(255, 255, 255, 0.8);
+            backdrop-filter: blur(12px);
+            cursor: pointer;
+            font-size: 12px;
+            color: #374151;
+            font-weight: 550;
+            transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .btn::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.4), transparent);
+            transition: left 0.6s;
+        }
+
+        .btn:hover::before {
+            left: 100%;
+        }
+
+        .btn:hover {
+            background: rgba(255, 255, 255, 0.95);
+            border-color: rgba(30, 58, 30, 0.15);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(30, 58, 30, 0.08), 0 1px 0 rgba(255, 255, 255, 0.5) inset;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #2d5a2d 0%, #3d6b3d 100%);
+            border-color: #2d5a2d;
+            color: white;
+            box-shadow: 0 1px 0 rgba(255, 255, 255, 0.1) inset;
+        }
+
+        .btn-primary:hover {
+            background: linear-gradient(135deg, #1e3a1e 0%, #2d5a2d 100%);
+            transform: translateY(-1px);
+            box-shadow: 0 6px 20px rgba(45, 90, 45, 0.2), 0 1px 0 rgba(255, 255, 255, 0.15) inset;
+        }
+
+        .role-badge {
+            background: linear-gradient(135deg, #1e3a1e 0%, #2d5a2d 100%);
+            color: rgba(255, 255, 255, 0.9);
+            padding: 6px 12px;
+            border-radius: 6px;
+            font-size: 11px;
+            font-weight: 600;
+            letter-spacing: 0.02em;
+            text-transform: uppercase;
+            box-shadow: 0 2px 4px rgba(30, 58, 30, 0.2);
+        }
+
+        .main-content {
+            display: grid;
+            grid-template-columns: 1fr 280px;
+            gap: 24px;
+            padding: 16px 20px;
+            max-width: 1600px;
+            margin: 0 auto;
+            height: calc(100vh - 70px);
+        }
+
+        .left-panel {
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .right-panel {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .rules-section {
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.95) 0%, rgba(255, 255, 255, 0.9) 100%);
+            backdrop-filter: blur(24px);
+            border-radius: 12px;
+            border: 1px solid rgba(30, 58, 30, 0.08);
+            box-shadow: 0 4px 24px rgba(30, 58, 30, 0.04), 0 1px 0 rgba(255, 255, 255, 0.5) inset;
+            overflow: hidden;
+            flex: 1;
+            min-height: 0;
+        }
+
+        .tab-nav {
+            display: flex;
+            border-bottom: 1px solid rgba(30, 58, 30, 0.08);
+            background: linear-gradient(135deg, rgba(45, 90, 45, 0.03) 0%, rgba(45, 90, 45, 0.01) 100%);
+        }
+
+        .tab {
+            padding: 12px 20px;
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-size: 12px;
+            border-bottom: 2px solid transparent;
+            transition: all 0.2s ease;
+            font-weight: 550;
+            color: #64748b;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .tab::before {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: linear-gradient(90deg, #2d5a2d 0%, #3d6b3d 100%);
+            transform: scaleX(0);
+            transition: transform 0.3s ease;
+        }
+
+        .tab.active {
+            color: #2d5a2d;
+            font-weight: 650;
+        }
+
+        .tab.active::before {
+            transform: scaleX(1);
+        }
+
+        .tab:hover {
+            background: rgba(45, 90, 45, 0.05);
+        }
+
+        .table-container {
+            overflow: auto;
+            flex: 1;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 0;
+        }
+
+        th {
+            background: linear-gradient(135deg, rgba(248, 250, 249, 0.9) 0%, rgba(248, 250, 249, 0.7) 100%);
+            padding: 10px 12px;
+            text-align: left;
+            font-weight: 600;
+            font-size: 11px;
+            color: #374151;
+            border-bottom: 1px solid rgba(30, 58, 30, 0.08);
+            white-space: nowrap;
+            letter-spacing: 0.02em;
+            text-transform: uppercase;
+            position: relative;
+            cursor: pointer;
+            user-select: none;
+            transition: all 0.2s ease;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+
+        th:hover {
+            background: linear-gradient(135deg, rgba(240, 248, 242, 0.9) 0%, rgba(240, 248, 242, 0.7) 100%);
+            color: #2d5a2d;
+        }
+
+        th.sortable::after {
+            content: '⇅';
+            position: absolute;
+            right: 6px;
+            top: 50%;
+            transform: translateY(-50%);
+            opacity: 0.4;
+            font-size: 12px;
+            transition: all 0.2s ease;
+        }
+
+        th.sort-asc::after {
+            content: '↑';
+            opacity: 0.8;
+            color: #2d5a2d;
+        }
+
+        th.sort-desc::after {
+            content: '↓';
+            opacity: 0.8;
+            color: #2d5a2d;
+        }
+
+        tr {
+            transition: all 0.15s ease;
+        }
+
+        tr:hover {
+            background: linear-gradient(135deg, rgba(240, 248, 242, 0.3) 0%, rgba(240, 248, 242, 0.1) 100%);
+        }
+
+        td {
+            padding: 8px 12px;
+            border-bottom: 1px solid rgba(30, 58, 30, 0.04);
+            font-size: 12px;
+            height: 36px;
+            vertical-align: middle;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            position: relative;
+        }
+
+        .vendor-cell {
+            max-width: 180px;
+            font-weight: 580;
+            color: #1e293b;
+            cursor: help;
+        }
+
+        .vendor-cell:hover {
+            color: #2d5a2d;
+        }
+
+        .frequency-cell {
+            width: 120px;
+            font-weight: 500;
+            color: #374151;
+        }
+
+        .amount-cell {
+            width: 100px;
+            text-align: right;
+            font-weight: 650;
+            color: #059669;
+            font-feature-settings: "tnum" 1;
+        }
+
+        .type-cell {
+            width: 90px;
+            text-align: center;
+        }
+
+        .rule-type-cell {
+            width: 100px;
+            text-align: center;
+        }
+
+        .actions-cell {
+            width: 120px;
+            text-align: right;
+        }
+
+        .type-badge {
+            padding: 3px 8px;
+            border-radius: 5px;
+            font-size: 10px;
+            font-weight: 600;
+            letter-spacing: 0.02em;
+            text-transform: uppercase;
+        }
+
+        .obligatory-badge {
+            background: linear-gradient(135deg, rgba(220, 38, 38, 0.1) 0%, rgba(220, 38, 38, 0.05) 100%);
+            color: #dc2626;
+            border: 1px solid rgba(220, 38, 38, 0.15);
+        }
+
+        .discretionary-badge {
+            background: linear-gradient(135deg, rgba(245, 158, 11, 0.1) 0%, rgba(245, 158, 11, 0.05) 100%);
+            color: #f59e0b;
+            border: 1px solid rgba(245, 158, 11, 0.15);
+        }
+
+        .rule-type-badge {
+            padding: 3px 8px;
+            border-radius: 5px;
+            font-size: 10px;
+            font-weight: 600;
+            letter-spacing: 0.02em;
+            text-transform: uppercase;
+        }
+
+        .vendor-override {
+            background: linear-gradient(135deg, rgba(59, 130, 246, 0.1) 0%, rgba(59, 130, 246, 0.05) 100%);
+            color: #3b82f6;
+            border: 1px solid rgba(59, 130, 246, 0.15);
+        }
+
+        .category-default {
+            background: linear-gradient(135deg, rgba(107, 114, 128, 0.1) 0%, rgba(107, 114, 128, 0.05) 100%);
+            color: #6b7280;
+            border: 1px solid rgba(107, 114, 128, 0.15);
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 4px;
+            justify-content: flex-end;
+        }
+
+        .btn-small {
+            padding: 4px 8px;
+            font-size: 9px;
+            border-radius: 4px;
+            font-weight: 600;
+            letter-spacing: 0.01em;
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            border: 1px solid transparent;
+        }
+
+        .btn-edit {
+            background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+            color: white;
+        }
+
+        .btn-edit:hover {
+            background: linear-gradient(135deg, #d97706 0%, #b45309 100%);
+            transform: translateY(-1px);
+            box-shadow: 0 3px 8px rgba(245, 158, 11, 0.25);
+        }
+
+        .btn-test {
+            background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+            color: white;
+        }
+
+        .btn-test:hover {
+            background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+            transform: translateY(-1px);
+            box-shadow: 0 3px 8px rgba(59, 130, 246, 0.25);
+        }
+
+        .btn-delete {
+            background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
+            color: white;
+        }
+
+        .btn-delete:hover {
+            background: linear-gradient(135deg, #b91c1c 0%, #991b1b 100%);
+            transform: translateY(-1px);
+            box-shadow: 0 3px 8px rgba(220, 38, 38, 0.25);
+        }
+
+        .sidebar-section {
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.9) 0%, rgba(255, 255, 255, 0.8) 100%);
+            backdrop-filter: blur(20px);
+            padding: 16px;
+            border-radius: 10px;
+            border: 1px solid rgba(30, 58, 30, 0.06);
+            position: relative;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            overflow: hidden;
+        }
+
+        .sidebar-section::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: linear-gradient(90deg, #2d5a2d 0%, #4a7c4a 50%, #5e8e5e 100%);
+            border-radius: 10px 10px 0 0;
+        }
+
+        .sidebar-section:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 24px rgba(30, 58, 30, 0.08), 0 2px 8px rgba(30, 58, 30, 0.04);
+            border-color: rgba(30, 58, 30, 0.12);
+        }
+
+        .section-title {
+            font-size: 16px;
+            font-weight: 650;
+            color: #1e3a1e;
+            margin-bottom: 12px;
+        }
+
+        .stat-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 0;
+            border-bottom: 1px solid rgba(30, 58, 30, 0.04);
+            font-size: 12px;
+        }
+
+        .stat-item:last-child {
+            border-bottom: none;
+        }
+
+        .stat-label {
+            color: #64748b;
+            font-weight: 500;
+        }
+
+        .stat-value {
+            font-weight: 650;
+            color: #1e3a1e;
+            font-feature-settings: "tnum" 1;
+        }
+
+        .stat-value.warning {
+            color: #dc2626;
+        }
+
+        .stat-value.success {
+            color: #2d5a2d;
+        }
+
+        .form-group {
+            margin-bottom: 12px;
+        }
+
+        .form-label {
+            display: block;
+            font-size: 11px;
+            font-weight: 600;
+            color: #374151;
+            margin-bottom: 4px;
+            text-transform: uppercase;
+            letter-spacing: 0.02em;
+        }
+
+        .form-input, .form-select {
+            width: 100%;
+            padding: 8px 10px;
+            border: 1px solid rgba(30, 58, 30, 0.15);
+            border-radius: 6px;
+            font-size: 12px;
+            background: rgba(255, 255, 255, 0.8);
+            backdrop-filter: blur(8px);
+            transition: all 0.2s ease;
+        }
+
+        .form-input:focus, .form-select:focus {
+            outline: none;
+            border-color: #2d5a2d;
+            box-shadow: 0 0 0 3px rgba(45, 90, 45, 0.1);
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+        }
+
+        .checkbox-group {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-top: 8px;
+        }
+
+        .checkbox-group input[type="checkbox"] {
+            width: 16px;
+            height: 16px;
+            border-radius: 4px;
+            border: 2px solid rgba(30, 58, 30, 0.3);
+            background: white;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .checkbox-group input[type="checkbox"]:checked {
+            background: #2d5a2d;
+            border-color: #2d5a2d;
+        }
+
+        .checkbox-group label {
+            font-size: 12px;
+            color: #374151;
+            cursor: pointer;
+            margin: 0;
+        }
+
+        .rule-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(15, 23, 42, 0.7);
+            backdrop-filter: blur(8px);
+            z-index: 1000;
+            display: none;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal-content {
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.95) 0%, rgba(255, 255, 255, 0.9) 100%);
+            backdrop-filter: blur(24px);
+            border-radius: 16px;
+            padding: 28px;
+            max-width: 700px;
+            width: 90%;
+            max-height: 80%;
+            overflow-y: auto;
+            box-shadow: 0 20px 40px rgba(30, 58, 30, 0.15), 0 8px 16px rgba(30, 58, 30, 0.08);
+            border: 1px solid rgba(30, 58, 30, 0.08);
+        }
+
+        .modal-header {
+            border-bottom: 1px solid rgba(30, 58, 30, 0.08);
+            padding-bottom: 16px;
+            margin-bottom: 24px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .modal-header h2 {
+            font-size: 20px;
+            font-weight: 650;
+            color: #1e3a1e;
+        }
+
+        .close-btn {
+            background: none;
+            border: none;
+            font-size: 28px;
+            cursor: pointer;
+            color: #64748b;
+            transition: color 0.2s ease;
+            padding: 4px;
+            border-radius: 4px;
+        }
+
+        .close-btn:hover {
+            color: #dc2626;
+            background: rgba(220, 38, 38, 0.05);
+        }
+
+        .form-textarea {
+            width: 100%;
+            padding: 8px 10px;
+            border: 1px solid rgba(30, 58, 30, 0.15);
+            border-radius: 6px;
+            font-size: 12px;
+            background: rgba(255, 255, 255, 0.8);
+            backdrop-filter: blur(8px);
+            transition: all 0.2s ease;
+            font-family: inherit;
+            resize: vertical;
+            min-height: 70px;
+        }
+
+        .form-textarea:focus {
+            outline: none;
+            border-color: #2d5a2d;
+            box-shadow: 0 0 0 3px rgba(45, 90, 45, 0.1);
+        }
+
+        /* Tooltip styles */
+        .tooltip {
+            position: relative;
+        }
+
+        .tooltip::after {
+            content: attr(data-tooltip);
+            position: absolute;
+            bottom: 100%;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(15, 23, 42, 0.95);
+            color: white;
+            padding: 8px 12px;
+            border-radius: 6px;
+            font-size: 11px;
+            white-space: nowrap;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.2s ease;
+            z-index: 1000;
+            backdrop-filter: blur(12px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            margin-bottom: 8px;
+        }
+
+        .tooltip:hover::after {
+            opacity: 1;
+        }
+
+        /* Scrollbar styling */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: rgba(30, 58, 30, 0.05);
+            border-radius: 3px;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: rgba(30, 58, 30, 0.2);
+            border-radius: 3px;
+            transition: background 0.2s ease;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: rgba(30, 58, 30, 0.3);
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>Payment Rules Management</h1>
+        <div class="header-actions">
+            <button class="btn">Bulk Import</button>
+            <button class="btn">Export Rules</button>
+            <button class="btn btn-primary" onclick="openCreateModal()">Create Rule</button>
+            <div class="role-badge">CFO</div>
+        </div>
+    </div>
+
+    <div class="main-content">
+        <div class="left-panel">
+            <div class="rules-section">
+                <div class="tab-nav">
+                    <button class="tab active" data-tab="vendor">Vendor Rules (12)</button>
+                    <button class="tab" data-tab="category">Category Defaults (4)</button>
+                    <button class="tab" data-tab="no-rule">No Rule Vendors (8)</button>
+                </div>
+
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th class="sortable vendor-cell" data-sort="vendor">Vendor</th>
+                                <th class="sortable frequency-cell" data-sort="frequency">Frequency</th>
+                                <th class="sortable amount-cell" data-sort="amount">Amount</th>
+                                <th class="sortable type-cell" data-sort="type">Type</th>
+                                <th class="sortable rule-type-cell" data-sort="rule-type">Rule Type</th>
+                                <th class="actions-cell">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td class="vendor-cell tooltip" data-tooltip="Monthly cloud infrastructure billing - auto-calculated from 6-month median">
+                                    Amazon Web Services
+                                </td>
+                                <td class="frequency-cell">Monthly (1st)</td>
+                                <td class="amount-cell">$2,850</td>
+                                <td class="type-cell">
+                                    <span class="type-badge obligatory-badge">Obligatory</span>
+                                </td>
+                                <td class="rule-type-cell">
+                                    <span class="rule-type-badge vendor-override">Vendor</span>
+                                </td>
+                                <td class="actions-cell">
+                                    <div class="action-buttons">
+                                        <button class="btn-small btn-edit">Edit</button>
+                                        <button class="btn-small btn-test">Test</button>
+                                        <button class="btn-small btn-delete">Delete</button>
+                                    </div>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td class="vendor-cell tooltip" data-tooltip="Weekly payroll processing - amount based on last 8 payments">
+                                    Payroll Services Inc
+                                </td>
+                                <td class="frequency-cell">Weekly (Fri)</td>
+                                <td class="amount-cell">$32,500</td>
+                                <td class="type-cell">
+                                    <span class="type-badge obligatory-badge">Obligatory</span>
+                                </td>
+                                <td class="rule-type-cell">
+                                    <span class="rule-type-badge vendor-override">Vendor</span>
+                                </td>
+                                <td class="actions-cell">
+                                    <div class="action-buttons">
+                                        <button class="btn-small btn-edit">Edit</button>
+                                        <button class="btn-small btn-test">Test</button>
+                                        <button class="btn-small btn-delete">Delete</button>
+                                    </div>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td class="vendor-cell tooltip" data-tooltip="Quarterly software licensing - fixed contract amount">
+                                    TechCorp Software Licensing
+                                </td>
+                                <td class="frequency-cell">Quarterly (15th)</td>
+                                <td class="amount-cell">$15,600</td>
+                                <td class="type-cell">
+                                    <span class="type-badge discretionary-badge">Discretionary</span>
+                                </td>
+                                <td class="rule-type-cell">
+                                    <span class="rule-type-badge vendor-override">Vendor</span>
+                                </td>
+                                <td class="actions-cell">
+                                    <div class="action-buttons">
+                                        <button class="btn-small btn-edit">Edit</button>
+                                        <button class="btn-small btn-test">Test</button>
+                                        <button class="btn-small btn-delete">Delete</button>
+                                    </div>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td class="vendor-cell tooltip" data-tooltip="Monthly office rent - fixed lease amount">
+                                    City Office Properties
+                                </td>
+                                <td class="frequency-cell">Monthly (1st)</td>
+                                <td class="amount-cell">$8,400</td>
+                                <td class="type-cell">
+                                    <span class="type-badge obligatory-badge">Obligatory</span>
+                                </td>
+                                <td class="rule-type-cell">
+                                    <span class="rule-type-badge vendor-override">Vendor</span>
+                                </td>
+                                <td class="actions-cell">
+                                    <div class="action-buttons">
+                                        <button class="btn-small btn-edit">Edit</button>
+                                        <button class="btn-small btn-test">Test</button>
+                                        <button class="btn-small btn-delete">Delete</button>
+                                    </div>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td class="vendor-cell tooltip" data-tooltip="Business insurance premiums - semi-annual payments">
+                                    Hartford Insurance Co
+                                </td>
+                                <td class="frequency-cell">Semi-Annual</td>
+                                <td class="amount-cell">$4,200</td>
+                                <td class="type-cell">
+                                    <span class="type-badge obligatory-badge">Obligatory</span>
+                                </td>
+                                <td class="rule-type-cell">
+                                    <span class="rule-type-badge vendor-override">Vendor</span>
+                                </td>
+                                <td class="actions-cell">
+                                    <div class="action-buttons">
+                                        <button class="btn-small btn-edit">Edit</button>
+                                        <button class="btn-small btn-test">Test</button>
+                                        <button class="btn-small btn-delete">Delete</button>
+                                    </div>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td class="vendor-cell tooltip" data-tooltip="Medical equipment supplier - varies by project needs">
+                                    Acme Medical Supplies
+                                </td>
+                                <td class="frequency-cell">Bi-Weekly</td>
+                                <td class="amount-cell">$12,450</td>
+                                <td class="type-cell">
+                                    <span class="type-badge discretionary-badge">Discretionary</span>
+                                </td>
+                                <td class="rule-type-cell">
+                                    <span class="rule-type-badge vendor-override">Vendor</span>
+                                </td>
+                                <td class="actions-cell">
+                                    <div class="action-buttons">
+                                        <button class="btn-small btn-edit">Edit</button>
+                                        <button class="btn-small btn-test">Test</button>
+                                        <button class="btn-small btn-delete">Delete</button>
+                                    </div>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td class="vendor-cell tooltip" data-tooltip="Monthly utilities - varies by usage">
+                                    Pacific Power Company
+                                </td>
+                                <td class="frequency-cell">Monthly (15th)</td>
+                                <td class="amount-cell">$2,850</td>
+                                <td class="type-cell">
+                                    <span class="type-badge obligatory-badge">Obligatory</span>
+                                </td>
+                                <td class="rule-type-cell">
+                                    <span class="rule-type-badge vendor-override">Vendor</span>
+                                </td>
+                                <td class="actions-cell">
+                                    <div class="action-buttons">
+                                        <button class="btn-small btn-edit">Edit</button>
+                                        <button class="btn-small btn-test">Test</button>
+                                        <button class="btn-small btn-delete">Delete</button>
+                                    </div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <div class="right-panel">
+            <div class="sidebar-section">
+                <div class="section-title">Rule Coverage</div>
+                <div class="stat-item">
+                    <div class="stat-label">Vendor Rules</div>
+                    <div class="stat-value">12</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-label">Category Defaults</div>
+                    <div class="stat-value success">4/4</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-label">No Rule Vendors</div>
+                    <div class="stat-value warning">8</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-label">Obligatory Rules</div>
+                    <div class="stat-value">8</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-label">Monthly Forecast</div>
+                    <div class="stat-value">$184,750</div>
+                </div>
+            </div>
+
+            <div class="sidebar-section">
+                <div class="section-title">Quick Create Rule</div>
+                
+                <div class="form-group">
+                    <label class="form-label">Rule Type</label>
+                    <select class="form-select">
+                        <option>Vendor Override</option>
+                        <option>Category Default</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Vendor</label>
+                    <select class="form-select">
+                        <option>Select Vendor...</option>
+                        <option>Metro Equipment Supplies</option>
+                        <option>Regional Medical Systems</option>
+                        <option>Healthcare IT Solutions</option>
+                        <option>Office Depot</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Frequency</label>
+                    <select class="form-select">
+                        <option>Weekly</option>
+                        <option>Semi-monthly</option>
+                        <option>Monthly</option>
+                        <option>Quarterly</option>
+                        <option>Annual</option>
+                    </select>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">Anchor Day</label>
+                        <input type="number" class="form-input" placeholder="1" min="1" max="31">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Business Day</label>
+                        <select class="form-select">
+                            <option>Next</option>
+                            <option>Previous</option>
+                            <option>None</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="checkbox-group">
+                    <input type="checkbox" id="obligatory">
+                    <label for="obligatory">Mark as Obligatory</label>
+                </div>
+
+                <button class="btn btn-primary" style="width: 100%; margin-top: 12px;">Create Rule</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Create/Edit Rule Modal -->
+    <div class="rule-modal" id="ruleModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Create Payment Rule</h2>
+                <button class="close-btn" onclick="closeCreateModal()">×</button>
+            </div>
+
+            <div style="display: grid; gap: 20px;">
+                <div class="form-group">
+                    <label class="form-label">Rule Type</label>
+                    <select class="form-select">
+                        <option>Vendor Override</option>
+                        <option>Category Default</option>
+                    </select>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">Vendor</label>
+                        <select class="form-select">
+                            <option>Metro Equipment Supplies</option>
+                            <option>Regional Medical Systems</option>
+                            <option>Healthcare IT Solutions</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Category Override</label>
+                        <select class="form-select">
+                            <option>Use Vendor Default</option>
+                            <option>Labor</option>
+                            <option>COGS</option>
+                            <option>Opex</option>
+                            <option>Other</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">Frequency</label>
+                        <select class="form-select">
+                            <option>Weekly</option>
+                            <option>Semi-monthly</option>
+                            <option>Monthly</option>
+                            <option>Quarterly</option>
+                            <option>Annual</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Anchor Day</label>
+                        <input type="number" class="form-input" placeholder="1" min="1" max="31">
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">Business Day Adjustment</label>
+                        <select class="form-select">
+                            <option>Next Business Day</option>
+                            <option>Previous Business Day</option>
+                            <option>No Adjustment</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Estimated Amount</label>
+                        <input type="number" class="form-input" placeholder="Auto-calculated from history">
+                    </div>
+                </div>
+
+                <div class="checkbox-group">
+                    <input type="checkbox" id="obligatoryModal">
+                    <label for="obligatoryModal">Mark as Obligatory (cannot be deferred)</label>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Notes</label>
+                    <textarea class="form-textarea" placeholder="Optional notes about this payment rule..."></textarea>
+                </div>
+
+                <div style="display: flex; gap: 12px; justify-content: flex-end; margin-top: 8px;">
+                    <button class="btn" onclick="closeCreateModal()">Cancel</button>
+                    <button class="btn btn-primary">Create Rule & Regenerate Forecast</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Sorting functionality
+        document.querySelectorAll('th.sortable').forEach(header => {
+            header.addEventListener('click', function() {
+                const sortBy = this.dataset.sort;
+                const currentSort = this.classList.contains('sort-asc') ? 'asc' : 
+                                   this.classList.contains('sort-desc') ? 'desc' : 'none';
+                
+                // Remove sort classes from all headers
+                document.querySelectorAll('th.sortable').forEach(h => {
+                    h.classList.remove('sort-asc', 'sort-desc');
+                });
+                
+                // Apply new sort class
+                if (currentSort === 'none' || currentSort === 'desc') {
+                    this.classList.add('sort-asc');
+                } else {
+                    this.classList.add('sort-desc');
+                }
+                
+                console.log(`Sorting by ${sortBy} in ${this.classList.contains('sort-asc') ? 'ascending' : 'descending'} order`);
+            });
+        });
+
+        // Tab functionality
+        document.querySelectorAll('.tab').forEach(tab => {
+            tab.addEventListener('click', function() {
+                document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+                this.classList.add('active');
+                
+                const tabType = this.dataset.tab;
+                console.log(`Switching to ${tabType} tab`);
+            });
+        });
+
+        // Modal functionality
+        function openCreateModal() {
+            document.getElementById('ruleModal').style.display = 'flex';
+        }
+
+        function closeCreateModal() {
+            document.getElementById('ruleModal').style.display = 'none';
+        }
+
+        // Close modal when clicking outside
+        window.onclick = function(event) {
+            const modal = document.getElementById('ruleModal');
+            if (event.target == modal) {
+                closeCreateModal();
+            }
+        }
+
+        // Double-click for detailed modal view
+        document.querySelectorAll('tr').forEach(row => {
+            row.addEventListener('dblclick', function() {
+                if (row.querySelector('th')) return; // Skip header row
+                openCreateModal();
+            });
+        });
+    </script>
+</body>
+</html>

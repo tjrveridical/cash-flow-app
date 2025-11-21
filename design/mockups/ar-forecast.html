@@ -1,0 +1,1065 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AR Forecast - Cash Flow App</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', Inter, system-ui, sans-serif;
+            background: linear-gradient(135deg, #f8faf9 0%, #f5f7f6 100%);
+            color: #0f172a;
+            font-size: 13px;
+            line-height: 1.2;
+            letter-spacing: -0.014em;
+            font-feature-settings: "tnum" 1;
+        }
+
+        .header {
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.95) 0%, rgba(255, 255, 255, 0.9) 100%);
+            backdrop-filter: blur(20px);
+            border-bottom: 1px solid rgba(30, 58, 30, 0.08);
+            padding: 14px 24px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            box-shadow: 0 1px 0 0 rgba(30, 58, 30, 0.04), 0 2px 24px -8px rgba(30, 58, 30, 0.08);
+        }
+
+        .header h1 {
+            font-size: 22px;
+            font-weight: 650;
+            background: linear-gradient(135deg, #1e3a1e 0%, #2d5a2d 40%, #3d6b3d 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            letter-spacing: -0.02em;
+        }
+
+        .header-actions {
+            display: flex;
+            gap: 12px;
+            align-items: center;
+        }
+
+        .btn {
+            padding: 10px 16px;
+            border: 1px solid rgba(30, 58, 30, 0.1);
+            border-radius: 8px;
+            background: rgba(255, 255, 255, 0.8);
+            backdrop-filter: blur(12px);
+            cursor: pointer;
+            font-size: 12px;
+            color: #374151;
+            font-weight: 550;
+            transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .btn::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.4), transparent);
+            transition: left 0.6s;
+        }
+
+        .btn:hover::before {
+            left: 100%;
+        }
+
+        .btn:hover {
+            background: rgba(255, 255, 255, 0.95);
+            border-color: rgba(30, 58, 30, 0.15);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(30, 58, 30, 0.08), 0 1px 0 rgba(255, 255, 255, 0.5) inset;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #2d5a2d 0%, #3d6b3d 100%);
+            border-color: #2d5a2d;
+            color: white;
+            box-shadow: 0 1px 0 rgba(255, 255, 255, 0.1) inset;
+        }
+
+        .btn-primary:hover {
+            background: linear-gradient(135deg, #1e3a1e 0%, #2d5a2d 100%);
+            transform: translateY(-1px);
+            box-shadow: 0 6px 20px rgba(45, 90, 45, 0.2), 0 1px 0 rgba(255, 255, 255, 0.15) inset;
+        }
+
+        .role-badge {
+            background: linear-gradient(135deg, #1e3a1e 0%, #2d5a2d 100%);
+            color: rgba(255, 255, 255, 0.9);
+            padding: 6px 12px;
+            border-radius: 6px;
+            font-size: 11px;
+            font-weight: 600;
+            letter-spacing: 0.02em;
+            text-transform: uppercase;
+            box-shadow: 0 2px 4px rgba(30, 58, 30, 0.2);
+        }
+
+        .main-content {
+            display: grid;
+            grid-template-columns: 1fr 260px;
+            gap: 20px;
+            padding: 16px 20px;
+            max-width: 1600px;
+            margin: 0 auto;
+            height: calc(100vh - 70px);
+        }
+
+        .left-panel {
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .right-panel {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .summary-metrics {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 12px;
+            margin-bottom: 16px;
+        }
+
+        .metric-card {
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.9) 0%, rgba(255, 255, 255, 0.8) 100%);
+            backdrop-filter: blur(20px);
+            padding: 12px 16px;
+            border-radius: 10px;
+            border: 1px solid rgba(30, 58, 30, 0.06);
+            position: relative;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            overflow: hidden;
+        }
+
+        .metric-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: linear-gradient(90deg, #2d5a2d 0%, #4a7c4a 50%, #5e8e5e 100%);
+            border-radius: 10px 10px 0 0;
+        }
+
+        .metric-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 24px rgba(30, 58, 30, 0.08), 0 2px 8px rgba(30, 58, 30, 0.04);
+            border-color: rgba(30, 58, 30, 0.12);
+        }
+
+        .metric-number {
+            font-size: 18px;
+            font-weight: 700;
+            color: #1e3a1e;
+            margin-bottom: 3px;
+            font-feature-settings: "tnum" 1;
+            letter-spacing: -0.02em;
+        }
+
+        .metric-number.warning {
+            color: #f59e0b;
+        }
+
+        .metric-number.success {
+            color: #2d5a2d;
+        }
+
+        .metric-label {
+            font-size: 11px;
+            color: #64748b;
+            font-weight: 520;
+            letter-spacing: -0.01em;
+        }
+
+        .filters-section {
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.95) 0%, rgba(255, 255, 255, 0.9) 100%);
+            backdrop-filter: blur(24px);
+            border-radius: 12px;
+            border: 1px solid rgba(30, 58, 30, 0.08);
+            padding: 16px 20px;
+            box-shadow: 0 2px 12px rgba(30, 58, 30, 0.04);
+        }
+
+        .filter-row {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+            gap: 16px;
+            align-items: end;
+        }
+
+        .filter-group {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .filter-label {
+            font-size: 11px;
+            font-weight: 600;
+            color: #475569;
+            text-transform: uppercase;
+            letter-spacing: 0.03em;
+        }
+
+        .filter-chips {
+            display: flex;
+            gap: 6px;
+            flex-wrap: wrap;
+        }
+
+        .filter-chip {
+            background: rgba(255, 255, 255, 0.7);
+            padding: 6px 12px;
+            border-radius: 6px;
+            font-size: 10px;
+            border: 1px solid rgba(30, 58, 30, 0.08);
+            cursor: pointer;
+            font-weight: 550;
+            color: #475569;
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            text-transform: uppercase;
+            letter-spacing: 0.03em;
+        }
+
+        .filter-chip:hover {
+            background: rgba(255, 255, 255, 0.9);
+            border-color: rgba(30, 58, 30, 0.15);
+            transform: translateY(-1px);
+        }
+
+        .filter-chip.active {
+            background: linear-gradient(135deg, #2d5a2d 0%, #3d6b3d 100%);
+            color: white;
+            border-color: #2d5a2d;
+            box-shadow: 0 2px 8px rgba(45, 90, 45, 0.3);
+        }
+
+        .ar-table {
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.95) 0%, rgba(255, 255, 255, 0.9) 100%);
+            backdrop-filter: blur(24px);
+            border-radius: 12px;
+            border: 1px solid rgba(30, 58, 30, 0.08);
+            box-shadow: 0 4px 24px rgba(30, 58, 30, 0.04), 0 1px 0 rgba(255, 255, 255, 0.5) inset;
+            overflow: hidden;
+            flex: 1;
+            min-height: 0;
+        }
+
+        .table-header {
+            background: linear-gradient(135deg, rgba(45, 90, 45, 0.03) 0%, rgba(45, 90, 45, 0.01) 100%);
+            padding: 16px 20px;
+            border-bottom: 1px solid rgba(30, 58, 30, 0.08);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .table-title {
+            font-weight: 650;
+            font-size: 16px;
+            color: #1e3a1e;
+            letter-spacing: -0.015em;
+        }
+
+        .table-meta {
+            color: #64748b;
+            font-size: 11px;
+            font-weight: 500;
+        }
+
+        .table-container {
+            overflow: auto;
+            flex: 1;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 0;
+        }
+
+        th {
+            background: linear-gradient(135deg, rgba(248, 250, 249, 0.9) 0%, rgba(248, 250, 249, 0.7) 100%);
+            padding: 10px 12px;
+            text-align: left;
+            font-weight: 600;
+            font-size: 11px;
+            color: #374151;
+            border-bottom: 1px solid rgba(30, 58, 30, 0.08);
+            white-space: nowrap;
+            letter-spacing: 0.02em;
+            text-transform: uppercase;
+            position: relative;
+            cursor: pointer;
+            user-select: none;
+            transition: all 0.2s ease;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+
+        th:hover {
+            background: linear-gradient(135deg, rgba(240, 248, 242, 0.9) 0%, rgba(240, 248, 242, 0.7) 100%);
+            color: #2d5a2d;
+        }
+
+        th.sortable::after {
+            content: '⇅';
+            position: absolute;
+            right: 6px;
+            top: 50%;
+            transform: translateY(-50%);
+            opacity: 0.4;
+            font-size: 12px;
+            transition: all 0.2s ease;
+        }
+
+        th.sort-asc::after {
+            content: '↑';
+            opacity: 0.8;
+            color: #2d5a2d;
+        }
+
+        th.sort-desc::after {
+            content: '↓';
+            opacity: 0.8;
+            color: #2d5a2d;
+        }
+
+        tr {
+            transition: all 0.15s ease;
+        }
+
+        tr:hover {
+            background: linear-gradient(135deg, rgba(240, 248, 242, 0.3) 0%, rgba(240, 248, 242, 0.1) 100%);
+        }
+
+        td {
+            padding: 8px 12px;
+            border-bottom: 1px solid rgba(30, 58, 30, 0.04);
+            font-size: 12px;
+            height: 36px;
+            vertical-align: middle;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            position: relative;
+        }
+
+        .week-cell {
+            width: 90px;
+            font-weight: 600;
+            color: #374151;
+            font-feature-settings: "tnum" 1;
+        }
+
+        .customer-cell {
+            max-width: 180px;
+            font-weight: 580;
+            color: #1e293b;
+            cursor: help;
+        }
+
+        .customer-cell:hover {
+            color: #2d5a2d;
+        }
+
+        .invoice-cell {
+            width: 100px;
+            font-family: 'SF Mono', Monaco, 'Cascadia Code', monospace;
+            font-size: 11px;
+            color: #475569;
+            font-weight: 500;
+        }
+
+        .amount-cell {
+            width: 110px;
+            text-align: right;
+            font-weight: 650;
+            font-feature-settings: "tnum" 1;
+            letter-spacing: -0.01em;
+            color: #059669;
+        }
+
+        .confidence-cell {
+            width: 90px;
+            text-align: center;
+        }
+
+        .confidence-badge {
+            padding: 3px 8px;
+            border-radius: 5px;
+            font-size: 10px;
+            font-weight: 600;
+            letter-spacing: 0.02em;
+            text-transform: uppercase;
+        }
+
+        .confidence-high {
+            background: linear-gradient(135deg, rgba(5, 150, 105, 0.1) 0%, rgba(5, 150, 105, 0.05) 100%);
+            color: #059669;
+            border: 1px solid rgba(5, 150, 105, 0.15);
+        }
+
+        .confidence-medium {
+            background: linear-gradient(135deg, rgba(245, 158, 11, 0.1) 0%, rgba(245, 158, 11, 0.05) 100%);
+            color: #f59e0b;
+            border: 1px solid rgba(245, 158, 11, 0.15);
+        }
+
+        .confidence-low {
+            background: linear-gradient(135deg, rgba(107, 114, 128, 0.1) 0%, rgba(107, 114, 128, 0.05) 100%);
+            color: #6b7280;
+            border: 1px solid rgba(107, 114, 128, 0.15);
+        }
+
+        .expected-date-cell {
+            width: 100px;
+            font-weight: 500;
+            color: #374151;
+            font-feature-settings: "tnum" 1;
+        }
+
+        .actions-cell {
+            width: 100px;
+            text-align: right;
+        }
+
+        .btn-small {
+            padding: 4px 8px;
+            font-size: 9px;
+            border-radius: 4px;
+            font-weight: 600;
+            letter-spacing: 0.01em;
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            border: 1px solid transparent;
+        }
+
+        .btn-edit {
+            background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+            color: white;
+        }
+
+        .btn-edit:hover {
+            background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+            transform: translateY(-1px);
+            box-shadow: 0 3px 8px rgba(59, 130, 246, 0.25);
+        }
+
+        .ar-stats {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .stat-card {
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.9) 0%, rgba(255, 255, 255, 0.8) 100%);
+            backdrop-filter: blur(20px);
+            padding: 12px;
+            border-radius: 10px;
+            border: 1px solid rgba(30, 58, 30, 0.06);
+            position: relative;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            overflow: hidden;
+        }
+
+        .stat-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: linear-gradient(90deg, #2d5a2d 0%, #4a7c4a 50%, #5e8e5e 100%);
+            border-radius: 10px 10px 0 0;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 24px rgba(30, 58, 30, 0.08), 0 2px 8px rgba(30, 58, 30, 0.04);
+            border-color: rgba(30, 58, 30, 0.12);
+        }
+
+        .stat-number {
+            font-size: 16px;
+            font-weight: 700;
+            color: #1e3a1e;
+            margin-bottom: 3px;
+            font-feature-settings: "tnum" 1;
+            letter-spacing: -0.02em;
+        }
+
+        .stat-number.warning {
+            color: #f59e0b;
+        }
+
+        .stat-number.positive {
+            color: #2d5a2d;
+        }
+
+        .stat-label {
+            font-size: 10px;
+            color: #64748b;
+            font-weight: 520;
+            letter-spacing: -0.01em;
+        }
+
+        /* Modal styles */
+        .ar-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(15, 23, 42, 0.7);
+            backdrop-filter: blur(8px);
+            z-index: 1000;
+            display: none;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal-content {
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.95) 0%, rgba(255, 255, 255, 0.9) 100%);
+            backdrop-filter: blur(24px);
+            border-radius: 16px;
+            padding: 28px;
+            max-width: 700px;
+            width: 90%;
+            max-height: 80%;
+            overflow-y: auto;
+            box-shadow: 0 20px 40px rgba(30, 58, 30, 0.15), 0 8px 16px rgba(30, 58, 30, 0.08);
+            border: 1px solid rgba(30, 58, 30, 0.08);
+        }
+
+        .modal-header {
+            border-bottom: 1px solid rgba(30, 58, 30, 0.08);
+            padding-bottom: 16px;
+            margin-bottom: 24px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .modal-header h2 {
+            font-size: 20px;
+            font-weight: 650;
+            color: #1e3a1e;
+        }
+
+        .close-btn {
+            background: none;
+            border: none;
+            font-size: 28px;
+            cursor: pointer;
+            color: #64748b;
+            transition: color 0.2s ease;
+            padding: 4px;
+            border-radius: 4px;
+        }
+
+        .close-btn:hover {
+            color: #dc2626;
+            background: rgba(220, 38, 38, 0.05);
+        }
+
+        .form-group {
+            margin-bottom: 16px;
+        }
+
+        .form-label {
+            display: block;
+            font-size: 12px;
+            font-weight: 600;
+            color: #374151;
+            margin-bottom: 6px;
+        }
+
+        .form-input, .form-select, .form-textarea {
+            width: 100%;
+            padding: 8px 12px;
+            border: 1px solid rgba(30, 58, 30, 0.15);
+            border-radius: 6px;
+            font-size: 12px;
+            background: rgba(255, 255, 255, 0.8);
+            backdrop-filter: blur(8px);
+            transition: all 0.2s ease;
+        }
+
+        .form-input:focus, .form-select:focus, .form-textarea:focus {
+            outline: none;
+            border-color: #2d5a2d;
+            box-shadow: 0 0 0 3px rgba(45, 90, 45, 0.1);
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+        }
+
+        /* Tooltip styles */
+        .tooltip {
+            position: relative;
+        }
+
+        .tooltip::after {
+            content: attr(data-tooltip);
+            position: absolute;
+            bottom: 100%;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(15, 23, 42, 0.95);
+            color: white;
+            padding: 8px 12px;
+            border-radius: 6px;
+            font-size: 11px;
+            white-space: nowrap;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.2s ease;
+            z-index: 1000;
+            backdrop-filter: blur(12px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            margin-bottom: 8px;
+        }
+
+        .tooltip:hover::after {
+            opacity: 1;
+        }
+
+        /* Scrollbar styling */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: rgba(30, 58, 30, 0.05);
+            border-radius: 3px;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: rgba(30, 58, 30, 0.2);
+            border-radius: 3px;
+            transition: background 0.2s ease;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: rgba(30, 58, 30, 0.3);
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>AR Forecast Management</h1>
+        <div class="header-actions">
+            <button class="btn">Import AR Aging</button>
+            <button class="btn">Export Forecast</button>
+            <button class="btn btn-primary">Add New Entry</button>
+            <div class="role-badge">CFO</div>
+        </div>
+    </div>
+
+    <div class="main-content">
+        <div class="left-panel">
+            <div class="summary-metrics">
+                <div class="metric-card">
+                    <div class="metric-number success">$312,850</div>
+                    <div class="metric-label">4-Week AR Forecast</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-number success">$89,250</div>
+                    <div class="metric-label">This Week Expected</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-number warning">78%</div>
+                    <div class="metric-label">Forecast Accuracy (30d)</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-number">$1,247,300</div>
+                    <div class="metric-label">Outstanding AR</div>
+                </div>
+            </div>
+
+            <div class="filters-section">
+                <div class="filter-row">
+                    <div class="filter-group">
+                        <div class="filter-label">Time Period</div>
+                        <div class="filter-chips">
+                            <div class="filter-chip active">4 Weeks</div>
+                            <div class="filter-chip">8 Weeks</div>
+                            <div class="filter-chip">12 Weeks</div>
+                        </div>
+                    </div>
+                    <div class="filter-group">
+                        <div class="filter-label">Confidence</div>
+                        <div class="filter-chips">
+                            <div class="filter-chip active">All</div>
+                            <div class="filter-chip">High</div>
+                            <div class="filter-chip">Medium</div>
+                            <div class="filter-chip">Low</div>
+                        </div>
+                    </div>
+                    <div class="filter-group">
+                        <div class="filter-label">Customer Type</div>
+                        <div class="filter-chips">
+                            <div class="filter-chip active">All</div>
+                            <div class="filter-chip">Hospital</div>
+                            <div class="filter-chip">Clinic</div>
+                            <div class="filter-chip">Other</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="ar-table">
+                <div class="table-header">
+                    <div>
+                        <div class="table-title">AR Collection Forecast</div>
+                        <div class="table-meta">Showing 12 entries • Last updated: Nov 20, 2024 10:30 AM</div>
+                    </div>
+                </div>
+                
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th class="sortable week-cell" data-sort="week">Week</th>
+                                <th class="sortable customer-cell" data-sort="customer">Customer</th>
+                                <th class="sortable invoice-cell" data-sort="invoice">Invoice</th>
+                                <th class="sortable amount-cell" data-sort="amount">Amount</th>
+                                <th class="sortable confidence-cell" data-sort="confidence">Confidence</th>
+                                <th class="sortable expected-date-cell" data-sort="date">Expected Date</th>
+                                <th class="actions-cell">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td class="week-cell">Week 47</td>
+                                <td class="customer-cell tooltip" data-tooltip="Municipal healthcare system - 45 day payment terms">
+                                    City Hospital
+                                </td>
+                                <td class="invoice-cell">#4421</td>
+                                <td class="amount-cell">$45,000</td>
+                                <td class="confidence-cell">
+                                    <span class="confidence-badge confidence-high">High</span>
+                                </td>
+                                <td class="expected-date-cell">Nov 22, 2024</td>
+                                <td class="actions-cell">
+                                    <button class="btn-small btn-edit" onclick="openARModal()">Edit</button>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td class="week-cell">Week 47</td>
+                                <td class="customer-cell tooltip" data-tooltip="Regional medical center - reliable payment history">
+                                    Regional Medical
+                                </td>
+                                <td class="invoice-cell">#4422</td>
+                                <td class="amount-cell">$32,500</td>
+                                <td class="confidence-cell">
+                                    <span class="confidence-badge confidence-high">High</span>
+                                </td>
+                                <td class="expected-date-cell">Nov 23, 2024</td>
+                                <td class="actions-cell">
+                                    <button class="btn-small btn-edit" onclick="openARModal()">Edit</button>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td class="week-cell">Week 47</td>
+                                <td class="customer-cell tooltip" data-tooltip="Metropolitan health network - payment delays common">
+                                    Metro Health
+                                </td>
+                                <td class="invoice-cell">#4419</td>
+                                <td class="amount-cell">$11,750</td>
+                                <td class="confidence-cell">
+                                    <span class="confidence-badge confidence-medium">Medium</span>
+                                </td>
+                                <td class="expected-date-cell">Nov 24, 2024</td>
+                                <td class="actions-cell">
+                                    <button class="btn-small btn-edit" onclick="openARModal()">Edit</button>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td class="week-cell">Week 48</td>
+                                <td class="customer-cell tooltip" data-tooltip="University medical center - quarterly payment cycle">
+                                    University Medical
+                                </td>
+                                <td class="invoice-cell">#4423</td>
+                                <td class="amount-cell">$52,000</td>
+                                <td class="confidence-cell">
+                                    <span class="confidence-badge confidence-medium">Medium</span>
+                                </td>
+                                <td class="expected-date-cell">Nov 27, 2024</td>
+                                <td class="actions-cell">
+                                    <button class="btn-small btn-edit" onclick="openARModal()">Edit</button>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td class="week-cell">Week 48</td>
+                                <td class="customer-cell tooltip" data-tooltip="Community healthcare - payment issues in past">
+                                    Community Health
+                                </td>
+                                <td class="invoice-cell">#4420</td>
+                                <td class="amount-cell">$24,400</td>
+                                <td class="confidence-cell">
+                                    <span class="confidence-badge confidence-low">Low</span>
+                                </td>
+                                <td class="expected-date-cell">Nov 29, 2024</td>
+                                <td class="actions-cell">
+                                    <button class="btn-small btn-edit" onclick="openARModal()">Edit</button>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td class="week-cell">Week 49</td>
+                                <td class="customer-cell tooltip" data-tooltip="Catholic health system - monthly payment pattern">
+                                    St. Mary's Hospital
+                                </td>
+                                <td class="invoice-cell">#4425</td>
+                                <td class="amount-cell">$68,500</td>
+                                <td class="confidence-cell">
+                                    <span class="confidence-badge confidence-medium">Medium</span>
+                                </td>
+                                <td class="expected-date-cell">Dec 3, 2024</td>
+                                <td class="actions-cell">
+                                    <button class="btn-small btn-edit" onclick="openARModal()">Edit</button>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td class="week-cell">Week 49</td>
+                                <td class="customer-cell tooltip" data-tooltip="Valley healthcare network - new customer">
+                                    Valley Healthcare
+                                </td>
+                                <td class="invoice-cell">#4426</td>
+                                <td class="amount-cell">$26,250</td>
+                                <td class="confidence-cell">
+                                    <span class="confidence-badge confidence-medium">Medium</span>
+                                </td>
+                                <td class="expected-date-cell">Dec 4, 2024</td>
+                                <td class="actions-cell">
+                                    <button class="btn-small btn-edit" onclick="openARModal()">Edit</button>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td class="week-cell">Week 50</td>
+                                <td class="customer-cell tooltip" data-tooltip="Rural medical center - quarterly payment schedule">
+                                    Rural Medical Center
+                                </td>
+                                <td class="invoice-cell">#4427</td>
+                                <td class="amount-cell">$35,200</td>
+                                <td class="confidence-cell">
+                                    <span class="confidence-badge confidence-low">Low</span>
+                                </td>
+                                <td class="expected-date-cell">Dec 10, 2024</td>
+                                <td class="actions-cell">
+                                    <button class="btn-small btn-edit" onclick="openARModal()">Edit</button>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td class="week-cell">Week 50</td>
+                                <td class="customer-cell tooltip" data-tooltip="Emergency services provider - payment track record good">
+                                    Emergency Services Inc
+                                </td>
+                                <td class="invoice-cell">#4428</td>
+                                <td class="amount-cell">$17,250</td>
+                                <td class="confidence-cell">
+                                    <span class="confidence-badge confidence-low">Low</span>
+                                </td>
+                                <td class="expected-date-cell">Dec 12, 2024</td>
+                                <td class="actions-cell">
+                                    <button class="btn-small btn-edit" onclick="openARModal()">Edit</button>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <div class="right-panel">
+            <div class="ar-stats">
+                <div class="stat-card">
+                    <div class="stat-number">12</div>
+                    <div class="stat-label">Active AR Entries</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number positive">5</div>
+                    <div class="stat-label">High Confidence</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number warning">4</div>
+                    <div class="stat-label">Medium Confidence</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number warning">3</div>
+                    <div class="stat-label">Low Confidence</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number warning">$12.4K</div>
+                    <div class="stat-label">Avg Weekly Variance</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number positive">2.3 days</div>
+                    <div class="stat-label">Avg Timing Error</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- AR Entry Modal -->
+    <div class="ar-modal" id="arModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Edit AR Entry</h2>
+                <button class="close-btn" onclick="closeARModal()">×</button>
+            </div>
+
+            <div style="display: grid; gap: 20px;">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">Customer</label>
+                        <select class="form-select">
+                            <option>City Hospital</option>
+                            <option>Regional Medical</option>
+                            <option>University Medical</option>
+                            <option>Metro Health</option>
+                            <option>Community Health</option>
+                            <option>Other (specify)</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Invoice Number</label>
+                        <input type="text" class="form-input" placeholder="#4429" value="#4421">
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">Expected Amount</label>
+                        <input type="number" class="form-input" placeholder="$0.00" value="45000">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Expected Date</label>
+                        <input type="date" class="form-input" value="2024-11-22">
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">Confidence Level</label>
+                        <select class="form-select">
+                            <option selected>High (90%+)</option>
+                            <option>Medium (70-90%)</option>
+                            <option>Low (50-70%)</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Payment Terms</label>
+                        <select class="form-select">
+                            <option>Net 30</option>
+                            <option selected>Net 45</option>
+                            <option>Net 60</option>
+                            <option>Net 90</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Collection Notes</label>
+                    <textarea class="form-textarea" rows="3" placeholder="Payment history, collection notes, contact information...">Municipal healthcare system with 45-day payment terms. Strong payment history, expect on time.</textarea>
+                </div>
+
+                <div style="display: flex; gap: 12px; justify-content: flex-end; margin-top: 8px;">
+                    <button class="btn" onclick="closeARModal()">Cancel</button>
+                    <button class="btn-primary">Save Changes</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Sorting functionality
+        document.querySelectorAll('th.sortable').forEach(header => {
+            header.addEventListener('click', function() {
+                const sortBy = this.dataset.sort;
+                const currentSort = this.classList.contains('sort-asc') ? 'asc' : 
+                                   this.classList.contains('sort-desc') ? 'desc' : 'none';
+                
+                // Remove sort classes from all headers
+                document.querySelectorAll('th.sortable').forEach(h => {
+                    h.classList.remove('sort-asc', 'sort-desc');
+                });
+                
+                // Apply new sort class
+                if (currentSort === 'none' || currentSort === 'desc') {
+                    this.classList.add('sort-asc');
+                } else {
+                    this.classList.add('sort-desc');
+                }
+                
+                console.log(`Sorting by ${sortBy} in ${this.classList.contains('sort-asc') ? 'ascending' : 'descending'} order`);
+            });
+        });
+
+        // Filter functionality
+        document.querySelectorAll('.filter-chip').forEach(chip => {
+            chip.addEventListener('click', function() {
+                // Only toggle within the same filter group
+                const parent = this.parentNode;
+                parent.querySelectorAll('.filter-chip').forEach(c => c.classList.remove('active'));
+                this.classList.add('active');
+                
+                console.log(`Filtering by: ${this.textContent}`);
+            });
+        });
+
+        // Modal functionality
+        function openARModal() {
+            document.getElementById('arModal').style.display = 'flex';
+        }
+
+        function closeARModal() {
+            document.getElementById('arModal').style.display = 'none';
+        }
+
+        // Close modal when clicking outside
+        window.onclick = function(event) {
+            const modal = document.getElementById('arModal');
+            if (event.target == modal) {
+                closeARModal();
+            }
+        }
+
+        // Double-click for detailed modal view
+        document.querySelectorAll('tr').forEach(row => {
+            row.addEventListener('dblclick', function() {
+                openARModal();
+            });
+        });
+    </script>
+</body>
+</html>
