@@ -148,6 +148,72 @@ Writes to `classified_bank_transactions`:
 **Milestone Reached:**
 Complete classification engine with deterministic rules, historical inference, ML stubs, and batch processing capabilities. System respects manual classifications and provides full audit trail.
 
+# 3.5 Display Category Hierarchy Architecture (Critical Mid-Build Correction)
+
+During the buildout of the forecast engine, we discovered that the initial approach to display-level categorization was insufficient for the real-world structure of WCTV’s financial data. The original assumption—that a single two-level naming structure would cover both the forecast spreadsheet and expense-card drilldowns—proved incorrect once real COGS and operational categories were ingested.
+
+This led to a significant but necessary redesign of the **display category system**, ensuring that both forecast-level aggregation and expense-card detail classification remain clean, stable, and extensible.
+
+## 3.5.1 The Problem That Emerged
+Once we imported actual category rows from CSV (Payroll, Rent, Software, Nurse Call, PXP, etc.), three issues surfaced:
+
+1. **COGS requires a 3-level hierarchy**  
+   Example:  
+    COGS → Hardware → Nurse Call
+    COGS → Software → PXP
+2. **The expense card drilldown categories are more granular**  
+(e.g. Mileage → Construction)
+
+3. **The forecast spreadsheet requires stable, top-level categories**  
+rather than raw GL accounts or inconsistent free-text labels.
+
+Additionally, when parent rows were auto-created for each `display_group`, duplicate parent rows formed (e.g. two “Labor” rows), creating inconsistent `parent_id` relationships and preventing clean aggregation.
+
+## 3.5.2 The Key Insight
+A single table can support all category operations if we add the right structural fields:
+
+- **`scope`** to separate forecast categories, card categories, or shared categories  
+- **`display_label2`** to allow true 3-level hierarchies  
+- **stable, unique `category_code`** for internal joins  
+- **proper top-level parent rows for each `display_group`**
+
+This design allows one unified category registry without dual systems.
+
+## 3.5.3 What We Did
+To fix the structure and restore deterministic hierarchy:
+
+1. **Inserted or validated one top-level parent row** for each `display_group`  
+(`parent_id = NULL`, `display_label = display_group`)
+
+2. **Assigned all level-2 children** (`display_label`) to the correct parent
+
+3. **Generated level-3 children** where `display_label2` was present (COGS only)
+
+4. **Fixed the duplicate parent row issue**  
+- Identified correct parent (the row with `parent_id IS NULL`)  
+- Reparented all children of duplicate rows to the correct parent  
+- Deleted the duplicates safely without breaking FK constraints
+
+5. **Rebuilt `sort_order`** using a CFO-friendly scheme:  
+- Level 1: AR → Labor → Facilities → Software → Insurance → Taxes → NL Opex → Expense Card → COGS → Misc  
+- Level 2: alphabetical within group  
+- Level 3: alphabetical fractional ordering under level-2 parents
+
+6. **Cleaned `category_code` values** to ensure uniqueness and remove trailing underscores.
+
+## 3.5.4 Why This Was Necessary
+This restructuring was required so that:
+
+- Forecast rows align with true business categories  
+- Expense-card drilldowns retain needed granularity  
+- COGS rows display correctly in the 3-level hierarchy  
+- Classification output can map reliably into categories  
+- Future payment rules (rent, payroll, software, insurance) attach cleanly  
+- The Excel-style grid renders with stable, intentional row ordering  
+- The entire system uses a single semantic vocabulary  
+
+This was the most structurally important correction made so far. With the display category system stabilized, we can now safely continue into **Forecast Engine 4.1 (Weekly Aggregation)** and downstream features.
+
 ---
 
 # 4. Forecast Engine (Next Major Milestone)
