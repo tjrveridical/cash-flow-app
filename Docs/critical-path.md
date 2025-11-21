@@ -60,59 +60,97 @@ Coordinates full ingestion:
 - Record errors and counts
 - Return a structured `CSVImportResult`
 
-## 2.5 Import UI  
+## 2.5 Import UI
 User-facing features:
-- CSV upload  
-- Display progress and validation errors  
-- Show import results  
+- CSV upload
+- Display progress and validation errors
+- Show import results
 - Accessible to authorized roles
 
-**Milestone Reached:**  
+## 2.6 Recent Improvements
+- Fixed header normalization to convert CSV headers like "Transaction date" → "transaction_date"
+- Synchronized normalization logic between parser and validator
+- Added support for headers with special characters and slashes (e.g., "Memo/Description" → "memo_description")
+
+**Milestone Reached:**
 The ingestion pipeline now imports real QuickBooks Transaction Detail CSVs with row-level validation and clean insertion into `raw_transactions`.
 
 ---
 
-# 3. Classification Engine (Next Major Milestone)
+# 3. Classification Engine
 
-Purpose: Convert raw imported rows into structured cash-flow transactions.
+Purpose: Convert raw imported rows into meaningful categorized transactions.
 
-## 3.1 Classification Rules  
-- Include only rows sourced from:
-- 1000 Bank of America  
-- 1010 Bill.com Money Out Clearing  
-- 1015 Genesis Reserve  
-- 1020 Genesis Operating  
-- Exclude:
-- Transfer  
-- Journal Entry  
-- Classification:
-- amount > 0 → cash_in  
-- amount < 0 → cash_out  
-- amount = 0 → exclude
+## 3.1 Classification Modules Implemented
 
-## 3.2 Classification Output  
+### types.ts
+- `RawTxInput` interface matching raw_transactions schema
+- `ClassificationRecord` interface for classification results
+- `ClassificationRule` interface for rule definitions
+
+### rules.ts - Deterministic Rules Engine
+- **GL Account-based classification:**
+  - Maps account numbers (1000, 1010, 1020, etc.) to categories
+  - Handles Labor (5xxx), COGS (4xxx), Opex (6xxx) accounts
+  - AR/AP (1200, 2010) and Cash accounts
+- **Keyword-based rules:**
+  - Payroll detection (payroll, salary, ADP)
+  - Rent detection (Irvine Company, Paylease, Princeland)
+  - Utilities (Verizon, AT&T, internet, electricity)
+  - Bank fees and service charges
+  - American Express cash back rewards
+- **Priority-based matching** with weighted rule application
+
+### historical.ts - Historical Inference
+- Queries past classifications by GL account number
+- Finds similar transactions using description word-overlap (60%+ threshold)
+- Uses weighted voting for classification inference
+- Requires 70%+ consensus for GL-based matches
+
+### mlAssist.ts - ML Integration Stub
+- Placeholder for future ML-based classification
+- Ready for v2 implementation with embeddings/neural networks
+
+### engine.ts - Main Classification Engine
+- **Decision tree:**
+  1. Skip if manual classification exists (preserve human decisions)
+  2. Try deterministic rules
+  3. Try historical inference
+  4. Try ML suggestion (currently stub)
+  5. Default to "Unclassified"
+- **Batch processing:** `classifyBatch(limit)` for unclassified transactions
+- **Reclassification:** `reclassifyTransaction()` for rule updates
+- Uses system user ID (00000000-0000-0000-0000-000000000000) for automated classifications
+
+## 3.2 Classification Output
 Writes to `classified_bank_transactions`:
-- transaction_id → FK to raw_transactions  
-- classification → cash_in / cash_out / exclude  
-- classification_source → rule-based or manual  
-- rule_id (if exclusion rule applied)  
-- confidence_score  
-- metadata / notes  
+- transaction_id → FK to raw_transactions
+- classification → meaningful category string (e.g., "Labor: Payroll", "Opex: Rent")
+- classification_source → "rules", "history", "ml_assist", "manual", "imported"
+- rule_id (optional, for future rule tracking)
+- confidence_score (null, not used in v1)
+- notes (explanation of classification logic)
+- classified_at, classified_by (audit trail)
 
-## 3.3 API Endpoint  
-`POST /api/classification/run`  
-- Processes all unclassified transactions  
-- Applies rule engine  
+## 3.3 API Endpoint
+`POST /api/classification/run`
+- Processes all unclassified transactions
+- Applies full decision tree
 - Reports summary counts
 
-## 3.4 Review Workflow (Optional Extension)  
-For Journal Entries or ambiguous transactions:
-- Queue for manual review  
-- Approve/Exclude/Reclassify
+## 3.4 Design Mockups Created
+- verification-inbox.html
+- master-ledger.html
+- forecast-spreadsheet.html
+- payment-rules.html
+- ar-forecast.html
+
+**Milestone Reached:**
+Complete classification engine with deterministic rules, historical inference, ML stubs, and batch processing capabilities. System respects manual classifications and provides full audit trail.
 
 ---
 
-# 4. Forecast Engine
+# 4. Forecast Engine (Next Major Milestone)
 
 After classification, construct weekly cash flow.
 
@@ -248,12 +286,30 @@ Instant runway impact simulation:
 
 # Summary Critical Path
 
-1. **Finish ingestion** (complete)  
-2. **Build classification engine** ← next  
-3. **Build weekly forecast engine**  
-4. **Render forecast dashboard (Excel-style)**  
-5. **Implement category mapping**  
-6. **Add payment rules for future projections**  
-7. **Build scenario-planning engine**  
+1. ✅ **Finish ingestion** (complete)
+2. ✅ **Build classification engine** (complete)
+3. **Build weekly forecast engine** ← next
+4. **Render forecast dashboard (Excel-style)**
+5. **Implement category mapping**
+6. **Add payment rules for future projections**
+7. **Build scenario-planning engine**
+
+## Recent Completions
+
+### Data Ingestion Pipeline
+- CSV parser with header normalization
+- CSV validator with consistent field mapping
+- Transaction mapper with QuickBooks support
+- Import service with duplicate detection
+- Import API endpoint
+
+### Classification Engine
+- GL account-based classification rules
+- Keyword-based classification rules
+- Historical inference with similarity matching
+- ML assist stub (ready for v2)
+- Batch processing and reclassification
+- Full audit trail with classification_source tracking
+- Design mockups for all major views
 
 This is the complete high-level roadmap for the Cash Flow Application.
