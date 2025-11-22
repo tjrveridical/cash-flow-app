@@ -13,7 +13,8 @@ export interface RawTxInput {
 
 export interface ClassificationRecord {
   transactionId: string;
-  classification: string;
+  categoryCode: string; // Primary: matches display_categories.category_code
+  classification: string; // Deprecated: kept for debug only
   classificationSource: "rules" | "history" | "ml_assist" | "manual" | "imported";
   ruleId?: string;
   notes?: string;

@@ -70,6 +70,7 @@ export async function classifyTransaction(
   // Default: mark as unclassified
   return {
     transactionId: rawTx.id,
+    categoryCode: "other_other",
     classification: "Unclassified",
     classificationSource: "rules",
     notes: "No classification rules or patterns matched",
@@ -121,6 +122,7 @@ export async function classifyBatch(
           .from("classified_bank_transactions")
           .insert({
             transaction_id: classification.transactionId,
+            category_code: classification.categoryCode,
             classification: classification.classification,
             classification_source: classification.classificationSource,
             rule_id: classification.ruleId || null,
@@ -182,6 +184,7 @@ export async function reclassifyTransaction(
   if (!result) {
     result = {
       transactionId: rawTx.id,
+      categoryCode: "other_other",
       classification: "Unclassified",
       classificationSource: "rules",
       notes: "No classification rules or patterns matched",
@@ -205,6 +208,7 @@ export async function reclassifyTransaction(
     const { error: updateError } = await supabase
       .from("classified_bank_transactions")
       .update({
+        category_code: result.categoryCode,
         classification: result.classification,
         classification_source: result.classificationSource,
         rule_id: result.ruleId || null,
@@ -221,6 +225,7 @@ export async function reclassifyTransaction(
       .from("classified_bank_transactions")
       .insert({
         transaction_id: result.transactionId,
+        category_code: result.categoryCode,
         classification: result.classification,
         classification_source: result.classificationSource,
         rule_id: result.ruleId || null,
