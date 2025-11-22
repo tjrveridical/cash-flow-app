@@ -3,8 +3,6 @@
 import { useEffect, useState, useCallback, useMemo } from "react";
 import { AgGridReact } from "ag-grid-react";
 import { ColDef, ICellRendererParams, ValueFormatterParams } from "ag-grid-community";
-import "ag-grid-community/styles/ag-grid.css";
-import "ag-grid-community/styles/ag-theme-quartz.css";
 import { DetailModal } from "./DetailModal";
 
 interface WeeklyForecast {
@@ -360,6 +358,7 @@ export function ForecastGrid() {
     <>
       <div className="ag-theme-quartz w-full" style={{ height: "calc(100vh - 180px)" }}>
         <AgGridReact
+          theme="quartz"
           rowData={rowData}
           columnDefs={columnDefs}
           defaultColDef={defaultColDef}
