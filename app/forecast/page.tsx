@@ -1,9 +1,11 @@
 import { ControlsBar } from "./components/ControlsBar";
 import { ForecastGrid } from "./components/ForecastGrid";
+import AgGridProvider from "./components/AgGridProvider";
 
 export default function ForecastPage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#f8faf9] to-[#f5f7f6]">
+      <AgGridProvider />
       {/* Header */}
       <header className="bg-gradient-to-br from-white/95 to-white/90 backdrop-blur-[20px] border-b border-[#1e3a1e]/8 px-6 py-3.5 sticky top-0 z-10 shadow-sm shadow-[#1e3a1e]/4">
         <div className="flex justify-between items-center">
