@@ -41,6 +41,7 @@ export async function inferFromHistory(
       .select(
         `
         classification,
+        category_code,
         classification_source,
         transaction:raw_transactions!transaction_id (
           qb_account_number,
@@ -54,19 +55,25 @@ export async function inferFromHistory(
 
     if (byGLAccount && byGLAccount.length > 0) {
       // Count classifications
-      const classificationCounts: Record<string, number> = {};
+      const classificationCounts: Record<string, { count: number; categoryCode: string }> = {};
       for (const record of byGLAccount) {
         const classification = record.classification;
-        classificationCounts[classification] = (classificationCounts[classification] || 0) + 1;
+        const categoryCode = record.category_code;
+        if (!classificationCounts[classification]) {
+          classificationCounts[classification] = { count: 0, categoryCode };
+        }
+        classificationCounts[classification].count++;
       }
 
       // Find most common classification
       let maxCount = 0;
       let mostCommon = "";
-      for (const [classification, count] of Object.entries(classificationCounts)) {
-        if (count > maxCount) {
-          maxCount = count;
+      let categoryCode = "other_other";
+      for (const [classification, data] of Object.entries(classificationCounts)) {
+        if (data.count > maxCount) {
+          maxCount = data.count;
           mostCommon = classification;
+          categoryCode = data.categoryCode;
         }
       }
 
@@ -74,6 +81,7 @@ export async function inferFromHistory(
       if (maxCount / byGLAccount.length >= 0.7) {
         return {
           transactionId: rawTx.id,
+          categoryCode,
           classification: mostCommon,
           classificationSource: "history",
           notes: `Inferred from ${maxCount} past transactions with same GL account`,
@@ -88,6 +96,7 @@ export async function inferFromHistory(
     .select(
       `
       classification,
+      category_code,
       classification_source,
       transaction:raw_transactions!transaction_id (
         description
@@ -99,7 +108,7 @@ export async function inferFromHistory(
 
   if (allClassified && allClassified.length > 0) {
     // Find similar descriptions
-    const similarMatches: Array<{ classification: string; similarity: number }> = [];
+    const similarMatches: Array<{ classification: string; categoryCode: string; similarity: number }> = [];
 
     for (const record of allClassified) {
       if (!record.transaction || typeof record.transaction !== "object") continue;
@@ -110,6 +119,7 @@ export async function inferFromHistory(
       if (similarity >= 0.6) {
         similarMatches.push({
           classification: record.classification,
+          categoryCode: record.category_code,
           similarity,
         });
       }
@@ -117,25 +127,30 @@ export async function inferFromHistory(
 
     if (similarMatches.length > 0) {
       // Count classifications weighted by similarity
-      const weightedCounts: Record<string, number> = {};
+      const weightedCounts: Record<string, { weight: number; categoryCode: string }> = {};
       for (const match of similarMatches) {
-        weightedCounts[match.classification] =
-          (weightedCounts[match.classification] || 0) + match.similarity;
+        if (!weightedCounts[match.classification]) {
+          weightedCounts[match.classification] = { weight: 0, categoryCode: match.categoryCode };
+        }
+        weightedCounts[match.classification].weight += match.similarity;
       }
 
       // Find highest weighted classification
       let maxWeight = 0;
       let bestMatch = "";
-      for (const [classification, weight] of Object.entries(weightedCounts)) {
-        if (weight > maxWeight) {
-          maxWeight = weight;
+      let categoryCode = "other_other";
+      for (const [classification, data] of Object.entries(weightedCounts)) {
+        if (data.weight > maxWeight) {
+          maxWeight = data.weight;
           bestMatch = classification;
+          categoryCode = data.categoryCode;
         }
       }
 
       if (bestMatch) {
         return {
           transactionId: rawTx.id,
+          categoryCode,
           classification: bestMatch,
           classificationSource: "history",
           notes: `Inferred from ${similarMatches.length} similar past transactions`,
