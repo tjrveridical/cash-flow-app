@@ -1,0 +1,475 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Payment Rules - Vendor Rules</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', Inter, system-ui, sans-serif;
+            background: linear-gradient(135deg, #f8faf9 0%, #f5f7f6 100%);
+            color: #0f172a;
+            font-size: 13px;
+            line-height: 1.2;
+            letter-spacing: -0.014em;
+            font-feature-settings: "tnum" 1;
+        }
+        .header {
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.95) 0%, rgba(255, 255, 255, 0.9) 100%);
+            backdrop-filter: blur(20px);
+            border-bottom: 1px solid rgba(30, 58, 30, 0.08);
+            padding: 14px 24px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            box-shadow: 0 1px 0 0 rgba(30, 58, 30, 0.04), 0 2px 24px -8px rgba(30, 58, 30, 0.08);
+        }
+        .header h1 {
+            font-size: 22px;
+            font-weight: 650;
+            background: linear-gradient(135deg, #1e3a1e 0%, #2d5a2d 40%, #3d6b3d 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            letter-spacing: -0.02em;
+        }
+        .header-actions {
+            display: flex;
+            gap: 12px;
+            align-items: center;
+        }
+        .btn {
+            padding: 10px 16px;
+            border: 1px solid rgba(30, 58, 30, 0.1);
+            border-radius: 8px;
+            background: rgba(255, 255, 255, 0.8);
+            backdrop-filter: blur(12px);
+            cursor: pointer;
+            font-size: 12px;
+            color: #374151;
+            font-weight: 550;
+            transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .btn:hover {
+            background: rgba(255, 255, 255, 0.95);
+            border-color: rgba(30, 58, 30, 0.15);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(30, 58, 30, 0.08), 0 1px 0 rgba(255, 255, 255, 0.5) inset;
+        }
+        .btn-primary {
+            background: linear-gradient(135deg, #2d5a2d 0%, #3d6b3d 100%);
+            border-color: #2d5a2d;
+            color: white;
+            box-shadow: 0 1px 0 rgba(255, 255, 255, 0.1) inset;
+        }
+        .btn-primary:hover {
+            background: linear-gradient(135deg, #1e3a1e 0%, #2d5a2d 100%);
+            transform: translateY(-1px);
+            box-shadow: 0 6px 20px rgba(45, 90, 45, 0.2), 0 1px 0 rgba(255, 255, 255, 0.15) inset;
+        }
+        .role-badge {
+            background: linear-gradient(135deg, #1e3a1e 0%, #2d5a2d 100%);
+            color: rgba(255, 255, 255, 0.9);
+            padding: 6px 12px;
+            border-radius: 6px;
+            font-size: 11px;
+            font-weight: 600;
+            letter-spacing: 0.02em;
+            text-transform: uppercase;
+            box-shadow: 0 2px 4px rgba(30, 58, 30, 0.2);
+        }
+        .main-content {
+            padding: 16px 20px;
+            max-width: 1600px;
+            margin: 0 auto;
+        }
+        .rules-section {
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.95) 0%, rgba(255, 255, 255, 0.9) 100%);
+            backdrop-filter: blur(24px);
+            border-radius: 12px;
+            border: 1px solid rgba(30, 58, 30, 0.08);
+            box-shadow: 0 4px 24px rgba(30, 58, 30, 0.04), 0 1px 0 rgba(255, 255, 255, 0.5) inset;
+            overflow: hidden;
+        }
+        .tab-nav {
+            display: flex;
+            border-bottom: 1px solid rgba(30, 58, 30, 0.08);
+            background: linear-gradient(135deg, rgba(45, 90, 45, 0.03) 0%, rgba(45, 90, 45, 0.01) 100%);
+        }
+        .tab {
+            padding: 12px 20px;
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-size: 12px;
+            border-bottom: 2px solid transparent;
+            transition: all 0.2s ease;
+            font-weight: 550;
+            color: #64748b;
+            position: relative;
+            overflow: hidden;
+        }
+        .tab::before {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: linear-gradient(90deg, #2d5a2d 0%, #3d6b3d 100%);
+            transform: scaleX(0);
+            transition: transform 0.3s ease;
+        }
+        .tab.active {
+            color: #2d5a2d;
+            font-weight: 650;
+        }
+        .tab.active::before {
+            transform: scaleX(1);
+        }
+        .tab:hover {
+            background: rgba(45, 90, 45, 0.05);
+        }
+        .content {
+            padding: 16px;
+        }
+        .search-box {
+            padding: 0 0 12px 0;
+        }
+        .search-box input {
+            width: 100%;
+            max-width: 400px;
+            padding: 8px 12px;
+            border: 1px solid rgba(30, 58, 30, 0.12);
+            border-radius: 8px;
+            font-size: 12px;
+            background: rgba(255, 255, 255, 0.8);
+            transition: all 0.2s ease;
+        }
+        .search-box input:focus {
+            outline: none;
+            border-color: #2d5a2d;
+            background: white;
+            box-shadow: 0 0 0 3px rgba(45, 90, 45, 0.1);
+        }
+        table {
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 0;
+        }
+        th {
+            background: linear-gradient(135deg, rgba(248, 250, 249, 0.9) 0%, rgba(248, 250, 249, 0.7) 100%);
+            padding: 10px 12px;
+            text-align: left;
+            font-weight: 600;
+            font-size: 11px;
+            color: #374151;
+            border-bottom: 1px solid rgba(30, 58, 30, 0.08);
+            white-space: nowrap;
+            letter-spacing: 0.02em;
+            text-transform: uppercase;
+        }
+        td {
+            padding: 9px 12px;
+            border-bottom: 1px solid rgba(30, 58, 30, 0.04);
+            font-size: 13px;
+            color: #0f172a;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        tr:last-child td {
+            border-bottom: none;
+        }
+        tbody tr {
+            transition: all 0.15s ease;
+        }
+        tbody tr:hover {
+            background: rgba(45, 90, 45, 0.02);
+        }
+        .vendor-name {
+            font-weight: 600;
+            color: #0f172a;
+        }
+        .rule-name {
+            font-family: 'SF Mono', Monaco, 'Courier New', monospace;
+            font-size: 12px;
+            color: #2d5a2d;
+            font-weight: 550;
+            letter-spacing: -0.01em;
+        }
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            padding: 4px 10px;
+            border-radius: 6px;
+            font-size: 10px;
+            font-weight: 600;
+            letter-spacing: 0.02em;
+            text-transform: uppercase;
+        }
+        .badge.obligatory {
+            background: rgba(220, 38, 38, 0.08);
+            color: #dc2626;
+        }
+        .badge.discretionary {
+            background: rgba(251, 191, 36, 0.12);
+            color: #92400e;
+        }
+        .badge.vendor {
+            background: rgba(45, 90, 45, 0.08);
+            color: #2d5a2d;
+        }
+        .amount {
+            font-weight: 650;
+            font-family: 'SF Mono', Monaco, 'Courier New', monospace;
+            color: #059669;
+            font-size: 13px;
+            letter-spacing: -0.01em;
+            font-feature-settings: "tnum" 1;
+        }
+        .actions {
+            display: flex;
+            gap: 6px;
+            justify-content: flex-end;
+        }
+        .btn-action {
+            padding: 5px 10px;
+            border-radius: 6px;
+            border: 1px solid rgba(30, 58, 30, 0.12);
+            background: rgba(255, 255, 255, 0.8);
+            cursor: pointer;
+            font-size: 11px;
+            font-weight: 550;
+            color: #374151;
+            transition: all 0.15s ease;
+        }
+        .btn-action:hover {
+            background: rgba(255, 255, 255, 1);
+            border-color: rgba(30, 58, 30, 0.2);
+            transform: translateY(-1px);
+            box-shadow: 0 2px 8px rgba(30, 58, 30, 0.08);
+        }
+        .btn-action.delete {
+            color: #dc2626;
+            border-color: rgba(220, 38, 38, 0.2);
+        }
+        .btn-action.delete:hover {
+            background: rgba(254, 242, 242, 1);
+            border-color: rgba(220, 38, 38, 0.3);
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>Payment Rules Management</h1>
+        <div class="header-actions">
+            <button class="btn btn-primary">Create Rule</button>
+            <div class="role-badge">CFO</div>
+        </div>
+    </div>
+
+    <div class="main-content">
+        <div class="rules-section">
+            <div class="tab-nav">
+                <button class="tab active">Vendor Rules (12)</button>
+                <button class="tab">No Rule Vendors (8)</button>
+            </div>
+
+            <div class="content">
+                <div class="search-box">
+                    <input type="text" placeholder="Search vendors...">
+                </div>
+                
+                <table>
+                    <thead>
+                        <tr>
+                            <th style="width: 30%;">Vendor</th>
+                            <th style="width: 20%;">Frequency</th>
+                            <th style="width: 14%;">Amount</th>
+                            <th style="width: 14%;">Rule Type</th>
+                            <th style="width: 22%; text-align: right;">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><span class="vendor-name">Amazon Web Services</span></td>
+                            <td><span class="rule-name">Monthly (1st)</span></td>
+                            <td><span class="amount">$2,850</span></td>
+                            <td><span class="badge vendor">VENDOR</span></td>
+                            <td>
+                                <div class="actions">
+                                    <button class="btn-action">Edit</button>
+                                    <button class="btn-action delete">Delete</button>
+                                </div>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td><span class="vendor-name">Payroll Services Inc</span></td>
+                            <td><span class="rule-name">Weekly (Fri)</span></td>
+                            <td><span class="amount">$32,500</span></td>
+                            
+                            <td><span class="badge vendor">VENDOR</span></td>
+                            <td>
+                                <div class="actions">
+                                    <button class="btn-action">Edit</button>
+                                    
+                                    <button class="btn-action delete">Delete</button>
+                                </div>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td><span class="vendor-name">TechCorp Software Licensing</span></td>
+                            <td><span class="rule-name">Quarterly (15th)</span></td>
+                            <td><span class="amount">$15,600</span></td>
+                            
+                            <td><span class="badge vendor">VENDOR</span></td>
+                            <td>
+                                <div class="actions">
+                                    <button class="btn-action">Edit</button>
+                                    
+                                    <button class="btn-action delete">Delete</button>
+                                </div>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td><span class="vendor-name">City Office Properties</span></td>
+                            <td><span class="rule-name">Monthly (1st)</span></td>
+                            <td><span class="amount">$8,400</span></td>
+                            
+                            <td><span class="badge vendor">VENDOR</span></td>
+                            <td>
+                                <div class="actions">
+                                    <button class="btn-action">Edit</button>
+                                    
+                                    <button class="btn-action delete">Delete</button>
+                                </div>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td><span class="vendor-name">Hartford Insurance Co</span></td>
+                            <td><span class="rule-name">Semi-Annual</span></td>
+                            <td><span class="amount">$4,200</span></td>
+                            
+                            <td><span class="badge vendor">VENDOR</span></td>
+                            <td>
+                                <div class="actions">
+                                    <button class="btn-action">Edit</button>
+                                    
+                                    <button class="btn-action delete">Delete</button>
+                                </div>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td><span class="vendor-name">Acme Medical Supplies</span></td>
+                            <td><span class="rule-name">Bi-Weekly</span></td>
+                            <td><span class="amount">$12,450</span></td>
+                            
+                            <td><span class="badge vendor">VENDOR</span></td>
+                            <td>
+                                <div class="actions">
+                                    <button class="btn-action">Edit</button>
+                                    
+                                    <button class="btn-action delete">Delete</button>
+                                </div>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td><span class="vendor-name">Pacific Power Company</span></td>
+                            <td><span class="rule-name">Monthly (15th)</span></td>
+                            <td><span class="amount">$2,850</span></td>
+                            
+                            <td><span class="badge vendor">VENDOR</span></td>
+                            <td>
+                                <div class="actions">
+                                    <button class="btn-action">Edit</button>
+                                    
+                                    <button class="btn-action delete">Delete</button>
+                                </div>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td><span class="vendor-name">Comcast Business</span></td>
+                            <td><span class="rule-name">Monthly (10th)</span></td>
+                            <td><span class="amount">$890</span></td>
+                            
+                            <td><span class="badge vendor">VENDOR</span></td>
+                            <td>
+                                <div class="actions">
+                                    <button class="btn-action">Edit</button>
+                                    
+                                    <button class="btn-action delete">Delete</button>
+                                </div>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td><span class="vendor-name">Office Depot</span></td>
+                            <td><span class="rule-name">Monthly (20th)</span></td>
+                            <td><span class="amount">$1,250</span></td>
+                            
+                            <td><span class="badge vendor">VENDOR</span></td>
+                            <td>
+                                <div class="actions">
+                                    <button class="btn-action">Edit</button>
+                                    
+                                    <button class="btn-action delete">Delete</button>
+                                </div>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td><span class="vendor-name">LinkedIn Recruiter</span></td>
+                            <td><span class="rule-name">Annual (Dec 1)</span></td>
+                            <td><span class="amount">$15,000</span></td>
+                            
+                            <td><span class="badge vendor">VENDOR</span></td>
+                            <td>
+                                <div class="actions">
+                                    <button class="btn-action">Edit</button>
+                                    
+                                    <button class="btn-action delete">Delete</button>
+                                </div>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td><span class="vendor-name">Google Workspace</span></td>
+                            <td><span class="rule-name">Monthly (1st)</span></td>
+                            <td><span class="amount">$2,100</span></td>
+                            
+                            <td><span class="badge vendor">VENDOR</span></td>
+                            <td>
+                                <div class="actions">
+                                    <button class="btn-action">Edit</button>
+                                    
+                                    <button class="btn-action delete">Delete</button>
+                                </div>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td><span class="vendor-name">Verizon Business</span></td>
+                            <td><span class="rule-name">Monthly (5th)</span></td>
+                            <td><span class="amount">$3,200</span></td>
+                            
+                            <td><span class="badge vendor">VENDOR</span></td>
+                            <td>
+                                <div class="actions">
+                                    <button class="btn-action">Edit</button>
+                                    
+                                    <button class="btn-action delete">Delete</button>
+                                </div>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

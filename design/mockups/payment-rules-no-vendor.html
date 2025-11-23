@@ -1,0 +1,569 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Payment Rules - No Rule Vendors</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', Inter, system-ui, sans-serif;
+            background: linear-gradient(135deg, #f8faf9 0%, #f5f7f6 100%);
+            color: #0f172a;
+            font-size: 13px;
+            line-height: 1.2;
+            letter-spacing: -0.014em;
+            font-feature-settings: "tnum" 1;
+        }
+        .header {
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.95) 0%, rgba(255, 255, 255, 0.9) 100%);
+            backdrop-filter: blur(20px);
+            border-bottom: 1px solid rgba(30, 58, 30, 0.08);
+            padding: 14px 24px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            box-shadow: 0 1px 0 0 rgba(30, 58, 30, 0.04), 0 2px 24px -8px rgba(30, 58, 30, 0.08);
+        }
+        .header h1 {
+            font-size: 22px;
+            font-weight: 650;
+            background: linear-gradient(135deg, #1e3a1e 0%, #2d5a2d 40%, #3d6b3d 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            letter-spacing: -0.02em;
+        }
+        .header-actions {
+            display: flex;
+            gap: 12px;
+            align-items: center;
+        }
+        .btn {
+            padding: 10px 16px;
+            border: 1px solid rgba(30, 58, 30, 0.1);
+            border-radius: 8px;
+            background: rgba(255, 255, 255, 0.8);
+            backdrop-filter: blur(12px);
+            cursor: pointer;
+            font-size: 12px;
+            color: #374151;
+            font-weight: 550;
+            transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .btn:hover {
+            background: rgba(255, 255, 255, 0.95);
+            border-color: rgba(30, 58, 30, 0.15);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(30, 58, 30, 0.08), 0 1px 0 rgba(255, 255, 255, 0.5) inset;
+        }
+        .btn-primary {
+            background: linear-gradient(135deg, #2d5a2d 0%, #3d6b3d 100%);
+            border-color: #2d5a2d;
+            color: white;
+            box-shadow: 0 1px 0 rgba(255, 255, 255, 0.1) inset;
+        }
+        .btn-primary:hover {
+            background: linear-gradient(135deg, #1e3a1e 0%, #2d5a2d 100%);
+            transform: translateY(-1px);
+            box-shadow: 0 6px 20px rgba(45, 90, 45, 0.2), 0 1px 0 rgba(255, 255, 255, 0.15) inset;
+        }
+        .btn-primary:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+            transform: none;
+        }
+        .btn-success {
+            background: linear-gradient(135deg, #16a34a 0%, #15803d 100%);
+            border-color: #16a34a;
+            color: white;
+        }
+        .btn-success:hover {
+            background: linear-gradient(135deg, #15803d 0%, #166534 100%);
+        }
+        .role-badge {
+            background: linear-gradient(135deg, #1e3a1e 0%, #2d5a2d 100%);
+            color: rgba(255, 255, 255, 0.9);
+            padding: 6px 12px;
+            border-radius: 6px;
+            font-size: 11px;
+            font-weight: 600;
+            letter-spacing: 0.02em;
+            text-transform: uppercase;
+            box-shadow: 0 2px 4px rgba(30, 58, 30, 0.2);
+        }
+        .main-content {
+            padding: 16px 20px;
+            max-width: 1600px;
+            margin: 0 auto;
+        }
+        .rules-section {
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.95) 0%, rgba(255, 255, 255, 0.9) 100%);
+            backdrop-filter: blur(24px);
+            border-radius: 12px;
+            border: 1px solid rgba(30, 58, 30, 0.08);
+            box-shadow: 0 4px 24px rgba(30, 58, 30, 0.04), 0 1px 0 rgba(255, 255, 255, 0.5) inset;
+            overflow: hidden;
+        }
+        .tab-nav {
+            display: flex;
+            border-bottom: 1px solid rgba(30, 58, 30, 0.08);
+            background: linear-gradient(135deg, rgba(45, 90, 45, 0.03) 0%, rgba(45, 90, 45, 0.01) 100%);
+        }
+        .tab {
+            padding: 12px 20px;
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-size: 12px;
+            border-bottom: 2px solid transparent;
+            transition: all 0.2s ease;
+            font-weight: 550;
+            color: #64748b;
+            position: relative;
+            overflow: hidden;
+        }
+        .tab::before {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: linear-gradient(90deg, #2d5a2d 0%, #3d6b3d 100%);
+            transform: scaleX(0);
+            transition: transform 0.3s ease;
+        }
+        .tab.active {
+            color: #2d5a2d;
+            font-weight: 650;
+        }
+        .tab.active::before {
+            transform: scaleX(1);
+        }
+        .tab:hover {
+            background: rgba(45, 90, 45, 0.05);
+        }
+        .content {
+            padding: 16px;
+        }
+        table {
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 0;
+        }
+        th {
+            background: linear-gradient(135deg, rgba(248, 250, 249, 0.9) 0%, rgba(248, 250, 249, 0.7) 100%);
+            padding: 10px 12px;
+            text-align: left;
+            font-weight: 600;
+            font-size: 11px;
+            color: #374151;
+            border-bottom: 1px solid rgba(30, 58, 30, 0.08);
+            white-space: nowrap;
+            letter-spacing: 0.02em;
+            text-transform: uppercase;
+        }
+        td {
+            padding: 9px 12px;
+            border-bottom: 1px solid rgba(30, 58, 30, 0.04);
+            font-size: 13px;
+            color: #0f172a;
+            vertical-align: middle;
+        }
+        tr:last-child td {
+            border-bottom: none;
+        }
+        tbody tr {
+            transition: all 0.15s ease;
+        }
+        tbody tr:hover {
+            background: rgba(45, 90, 45, 0.02);
+        }
+        .transaction-wrapper {
+            display: flex;
+            flex-direction: column;
+            gap: 3px;
+            max-width: 450px;
+        }
+        .transaction-desc {
+            font-family: 'SF Mono', Monaco, 'Courier New', monospace;
+            font-size: 12px;
+            color: #0f172a;
+            font-weight: 600;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            letter-spacing: -0.01em;
+        }
+        .transaction-desc:empty {
+            display: none;
+        }
+        .transaction-memo {
+            font-family: 'SF Mono', Monaco, 'Courier New', monospace;
+            font-size: 11px;
+            color: #64748b;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .transaction-memo:empty {
+            display: none;
+        }
+        .amount {
+            font-weight: 650;
+            font-family: 'SF Mono', Monaco, 'Courier New', monospace;
+            color: #dc2626;
+            font-size: 13px;
+            letter-spacing: -0.01em;
+        }
+        .typeahead-wrapper {
+            position: relative;
+            width: 100%;
+        }
+        .typeahead-input {
+            width: 100%;
+            padding: 7px 10px;
+            border: 1px solid rgba(30, 58, 30, 0.12);
+            border-radius: 6px;
+            font-size: 12px;
+            background: rgba(255, 255, 255, 0.8);
+            transition: all 0.2s ease;
+        }
+        .typeahead-input:focus {
+            outline: none;
+            border-color: #2d5a2d;
+            background: white;
+            box-shadow: 0 0 0 3px rgba(45, 90, 45, 0.1);
+        }
+        .typeahead-input[readonly] {
+            background: rgba(248, 250, 249, 0.6);
+            color: #374151;
+        }
+        .typeahead-results {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            background: white;
+            border: 1px solid rgba(30, 58, 30, 0.12);
+            border-top: none;
+            border-radius: 0 0 6px 6px;
+            max-height: 200px;
+            overflow-y: auto;
+            z-index: 10;
+            box-shadow: 0 4px 12px rgba(30, 58, 30, 0.08);
+            margin-top: -1px;
+        }
+        .typeahead-item {
+            padding: 8px 10px;
+            cursor: pointer;
+            font-size: 12px;
+            color: #374151;
+            transition: all 0.1s ease;
+        }
+        .typeahead-item:hover {
+            background: rgba(45, 90, 45, 0.05);
+        }
+        .typeahead-item.create-new {
+            color: #2d5a2d;
+            font-weight: 600;
+            border-top: 1px solid rgba(30, 58, 30, 0.08);
+        }
+        .help-text {
+            font-size: 10px;
+            color: #94a3b8;
+            margin-top: 3px;
+            font-style: italic;
+        }
+        .help-text.success {
+            color: #16a34a;
+        }
+        .rule-select {
+            display: flex;
+            gap: 6px;
+            flex-wrap: wrap;
+        }
+        .rule-chip {
+            padding: 5px 11px;
+            border-radius: 6px;
+            font-size: 11px;
+            font-weight: 550;
+            cursor: pointer;
+            border: 1px solid rgba(30, 58, 30, 0.12);
+            background: rgba(255, 255, 255, 0.8);
+            color: #374151;
+            transition: all 0.15s ease;
+            white-space: nowrap;
+        }
+        .rule-chip:hover {
+            border-color: rgba(30, 58, 30, 0.2);
+            background: rgba(255, 255, 255, 1);
+        }
+        .rule-chip.selected {
+            background: rgba(45, 90, 45, 0.08);
+            color: #2d5a2d;
+            border-color: #2d5a2d;
+            font-weight: 600;
+        }
+        .rule-chip.create {
+            background: rgba(22, 163, 74, 0.08);
+            color: #16a34a;
+            border-color: #16a34a;
+        }
+        .actions-cell {
+            display: flex;
+            gap: 6px;
+            justify-content: flex-end;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>Payment Rules Management</h1>
+        <div class="header-actions">
+            <button class="btn btn-primary">Create Rule</button>
+            <div class="role-badge">CFO</div>
+        </div>
+    </div>
+
+    <div class="main-content">
+        <div class="rules-section">
+            <div class="tab-nav">
+                <button class="tab">Vendor Rules (12)</button>
+                <button class="tab active">No Rule Vendors (8)</button>
+            </div>
+
+            <div class="content">
+                <table>
+                    <thead>
+                        <tr>
+                            <th style="width: 32%;">Transaction Details</th>
+                            <th style="width: 10%;">Amount</th>
+                            <th style="width: 20%;">Assign to Vendor</th>
+                            <th style="width: 20%;">Payment Rule</th>
+                            <th style="width: 18%; text-align: right;">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>
+                                <div class="transaction-wrapper">
+                                    <div class="transaction-desc">ACH DEBIT INTUIT 0000127589 PPD ID: 3849271920</div>
+                                    <div class="transaction-memo">QB ONLINE SUBSCRIPTION</div>
+                                </div>
+                            </td>
+                            <td><span class="amount">-$89.00</span></td>
+                            <td>
+                                <div class="typeahead-wrapper">
+                                    <input type="text" class="typeahead-input" placeholder="Start typing...">
+                                    <div class="help-text">Search or create vendor</div>
+                                </div>
+                            </td>
+                            <td>
+                                <div class="rule-select">
+                                    <span class="help-text">Select vendor first</span>
+                                </div>
+                            </td>
+                            <td>
+                                <div class="actions-cell">
+                                    <button class="btn btn-primary" disabled>Assign</button>
+                                </div>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>
+                                <div class="transaction-wrapper">
+                                    <div class="transaction-desc">ACH DEBIT AMAZON.COM AMZN.COM/BILL WA 09283746PP</div>
+                                    <div class="transaction-memo"></div>
+                                </div>
+                            </td>
+                            <td><span class="amount">-$12,450.32</span></td>
+                            <td>
+                                <div class="typeahead-wrapper">
+                                    <input type="text" class="typeahead-input" value="Ama">
+                                    <div class="typeahead-results">
+                                        <div class="typeahead-item">Amazon Web Services</div>
+                                        <div class="typeahead-item">Amazon Business</div>
+                                        <div class="typeahead-item create-new">+ Create "Amazon.com"</div>
+                                    </div>
+                                    <div class="help-text">Search or create vendor</div>
+                                </div>
+                            </td>
+                            <td>
+                                <div class="rule-select">
+                                    <span class="help-text">Select vendor first</span>
+                                </div>
+                            </td>
+                            <td>
+                                <div class="actions-cell">
+                                    <button class="btn btn-primary" disabled>Assign</button>
+                                </div>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>
+                                <div class="transaction-wrapper">
+                                    <div class="transaction-desc">ACH DEBIT COMCAST 000098237 PPD ID: 2847192837</div>
+                                    <div class="transaction-memo">INTERNET SVC NOV</div>
+                                </div>
+                            </td>
+                            <td><span class="amount">-$890.00</span></td>
+                            <td>
+                                <div class="typeahead-wrapper">
+                                    <input type="text" class="typeahead-input" value="Comcast Business" readonly>
+                                    <div class="help-text success">✓ Vendor matched</div>
+                                </div>
+                            </td>
+                            <td>
+                                <div class="rule-select">
+                                    <div class="rule-chip selected">Monthly (10th)</div>
+                                    <div class="rule-chip create">+ New Rule</div>
+                                </div>
+                            </td>
+                            <td>
+                                <div class="actions-cell">
+                                    <button class="btn btn-primary">Assign</button>
+                                </div>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>
+                                <div class="transaction-wrapper">
+                                    <div class="transaction-desc">CHECK #2847 STAPLES ADVANTAGE</div>
+                                    <div class="transaction-memo"></div>
+                                </div>
+                            </td>
+                            <td><span class="amount">-$342.67</span></td>
+                            <td>
+                                <div class="typeahead-wrapper">
+                                    <input type="text" class="typeahead-input" value="Staples Office Supplies" readonly>
+                                    <div class="help-text success">✓ New vendor</div>
+                                </div>
+                            </td>
+                            <td>
+                                <div class="rule-select">
+                                    <div class="rule-chip create selected">+ New Rule</div>
+                                </div>
+                            </td>
+                            <td>
+                                <div class="actions-cell">
+                                    <button class="btn btn-success">Assign & Create</button>
+                                </div>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>
+                                <div class="transaction-wrapper">
+                                    <div class="transaction-desc">WIRE XXXXXX7392 BENEFICIAL NATIONAL BANK</div>
+                                    <div class="transaction-memo">MONTHLY INSURANCE PREMIUM</div>
+                                </div>
+                            </td>
+                            <td><span class="amount">-$4,280.00</span></td>
+                            <td>
+                                <div class="typeahead-wrapper">
+                                    <input type="text" class="typeahead-input" placeholder="Start typing...">
+                                    <div class="help-text">Search or create vendor</div>
+                                </div>
+                            </td>
+                            <td>
+                                <div class="rule-select">
+                                    <span class="help-text">Select vendor first</span>
+                                </div>
+                            </td>
+                            <td>
+                                <div class="actions-cell">
+                                    <button class="btn btn-primary" disabled>Assign</button>
+                                </div>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>
+                                <div class="transaction-wrapper">
+                                    <div class="transaction-desc">ACH DEBIT PGE 20241115 ID:928374651</div>
+                                    <div class="transaction-memo">ELECTRIC SERVICE</div>
+                                </div>
+                            </td>
+                            <td><span class="amount">-$2,380.00</span></td>
+                            <td>
+                                <div class="typeahead-wrapper">
+                                    <input type="text" class="typeahead-input" value="Pacific Gas & Electric" readonly>
+                                    <div class="help-text success">✓ Vendor matched</div>
+                                </div>
+                            </td>
+                            <td>
+                                <div class="rule-select">
+                                    <div class="rule-chip selected">Monthly (15th)</div>
+                                    <div class="rule-chip create">+ New Rule</div>
+                                </div>
+                            </td>
+                            <td>
+                                <div class="actions-cell">
+                                    <button class="btn btn-primary">Assign</button>
+                                </div>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>
+                                <div class="transaction-wrapper">
+                                    <div class="transaction-desc">DEBIT CARD PURCHASE - COSTCO WHSE #0456 PLEASANT HILL CA</div>
+                                    <div class="transaction-memo"></div>
+                                </div>
+                            </td>
+                            <td><span class="amount">-$1,247.83</span></td>
+                            <td>
+                                <div class="typeahead-wrapper">
+                                    <input type="text" class="typeahead-input" placeholder="Start typing...">
+                                    <div class="help-text">Search or create vendor</div>
+                                </div>
+                            </td>
+                            <td>
+                                <div class="rule-select">
+                                    <span class="help-text">Select vendor first</span>
+                                </div>
+                            </td>
+                            <td>
+                                <div class="actions-cell">
+                                    <button class="btn btn-primary" disabled>Assign</button>
+                                </div>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>
+                                <div class="transaction-wrapper">
+                                    <div class="transaction-desc">ACH DEBIT VERIZON WIRELESS 20241110</div>
+                                    <div class="transaction-memo">MOBILE SERVICES OCT 2024</div>
+                                </div>
+                            </td>
+                            <td><span class="amount">-$650.23</span></td>
+                            <td>
+                                <div class="typeahead-wrapper">
+                                    <input type="text" class="typeahead-input" placeholder="Start typing...">
+                                    <div class="help-text">Search or create vendor</div>
+                                </div>
+                            </td>
+                            <td>
+                                <div class="rule-select">
+                                    <span class="help-text">Select vendor first</span>
+                                </div>
+                            </td>
+                            <td>
+                                <div class="actions-cell">
+                                    <button class="btn btn-primary" disabled>Assign</button>
+                                </div>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
