@@ -52,17 +52,20 @@ export function ForecastGrid() {
     fetch("/api/forecast/weeks?weeksCount=26")
       .then(r => r.json())
       .then(data => {
+        console.log("API response:", data);
         if (data.success) setWeeks(data.weeks);
       })
       .finally(() => setLoading(false));
   }, []);
 
   const rowData = useMemo(() => {
+    console.log("rowData useMemo - weeks:", weeks);
     if (!weeks.length) return [];
 
     const rows: GridRow[] = [];
     const allCats = new Map<string, CategoryForecast>();
     weeks.forEach(w => w.categories.forEach(c => allCats.set(c.categoryCode, c)));
+    console.log("allCats size:", allCats.size);
 
     const addRow = (cat: CategoryForecast) => {
       const row: GridRow = {
@@ -101,6 +104,7 @@ export function ForecastGrid() {
     rows.push({ category: "Net Cash Flow", displayGroup: "SUMMARY", categoryCode: "net", isSection: false, isTotal: true, isCashBalance: false, ...weeks.reduce((a, ww) => ({ ...a, [`week_${ww.weekEnding}`]: ww.netCashFlow }), {}) });
     rows.push({ category: "Ending Cash", displayGroup: "CASH BALANCE", categoryCode: "ending", isSection: false, isTotal: true, isCashBalance: true, ...weeks.reduce((a, ww) => ({ ...a, [`week_${ww.weekEnding}`]: ww.endingCash }), {}) });
 
+    console.log("Generated rows:", rows.length, rows);
     return rows;
   }, [weeks]);
 
