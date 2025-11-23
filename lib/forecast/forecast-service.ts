@@ -76,6 +76,8 @@ export class ForecastService {
         : new Date(endDate.getTime() - weeksCount * 7 * 24 * 60 * 60 * 1000);
 
       // Query transactions with classifications and display categories
+      console.log(`Querying transactions from ${formatDate(startDate)} to ${formatDate(endDate)}`);
+
       const { data: transactions, error } = await this.supabase
         .from("raw_transactions")
         .select(
@@ -94,6 +96,9 @@ export class ForecastService {
         .lte("date", formatDate(endDate))
         .order("date", { ascending: true });
 
+      console.log(`Found ${transactions?.length || 0} transactions in date range`);
+      console.log(`Latest transaction date: ${latestTx.date}`);
+
       if (error) {
         throw error;
       }
@@ -109,6 +114,12 @@ export class ForecastService {
       // Group transactions by week and category
       const weekMap = new Map<string, Map<string, CategoryForecast>>();
 
+      console.log(`Processing ${transactions?.length || 0} transactions...`);
+      let skippedNoClassification = 0;
+      let skippedNoCategoryCode = 0;
+      let skippedCategoryNotFound = 0;
+      let processed = 0;
+
       for (const tx of transactions || []) {
         const txDate = new Date(tx.date);
         const weekEnding = formatDate(getWeekEnding(txDate));
@@ -118,12 +129,27 @@ export class ForecastService {
           ? tx.classified_bank_transactions[0]
           : tx.classified_bank_transactions;
 
-        if (!classified || !classified.category_code) continue;
+        if (!classified) {
+          skippedNoClassification++;
+          continue;
+        }
+
+        if (!classified.category_code) {
+          skippedNoCategoryCode++;
+          console.log(`Transaction ${tx.id} missing category_code:`, classified);
+          continue;
+        }
 
         const categoryCode = classified.category_code;
         const category = categoryMap.get(categoryCode);
 
-        if (!category) continue;
+        if (!category) {
+          skippedCategoryNotFound++;
+          console.log(`Category not found for code: ${categoryCode}`);
+          continue;
+        }
+
+        processed++;
 
         // Special handling for AR
         let effectiveCategoryCode = categoryCode;
@@ -165,6 +191,9 @@ export class ForecastService {
         cat.amount += tx.amount;
         cat.transactionCount += 1;
       }
+
+      console.log(`Processing summary: processed=${processed}, skippedNoClassification=${skippedNoClassification}, skippedNoCategoryCode=${skippedNoCategoryCode}, skippedCategoryNotFound=${skippedCategoryNotFound}`);
+      console.log(`Weeks found: ${weekMap.size}`);
 
       // Convert to WeeklyForecast array
       const weeks: WeeklyForecast[] = [];
