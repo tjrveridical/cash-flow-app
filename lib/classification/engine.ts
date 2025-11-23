@@ -138,7 +138,7 @@ export async function classifyBatch(
             confidence_score: null,
             notes: classification.notes || null,
             classified_at: new Date().toISOString(),
-            classified_by: SYSTEM_USER_ID,
+            classified_by: null, // NULL for automated classifications
           });
 
         if (insertError) {
@@ -241,7 +241,7 @@ export async function reclassifyTransaction(
         confidence_score: null,
         notes: result.notes || null,
         classified_at: new Date().toISOString(),
-        classified_by: SYSTEM_USER_ID,
+        classified_by: null, // NULL for automated classifications
       });
 
     return !insertError;

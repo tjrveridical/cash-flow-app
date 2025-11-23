@@ -82,7 +82,7 @@ export class ClassificationService {
                 confidence_score: null,
                 notes: classification.notes || null,
                 classified_at: new Date().toISOString(),
-                classified_by: SYSTEM_USER_ID,
+                classified_by: null, // NULL for automated classifications
               });
 
             if (insertError) {
