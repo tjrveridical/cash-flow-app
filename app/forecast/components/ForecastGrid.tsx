@@ -1,8 +1,6 @@
 "use client";
 
-import { useEffect, useState, useMemo } from "react";
-import { AgGridReact } from "ag-grid-react";
-import { ColDef, ValueFormatterParams, CellClassParams, CellDoubleClickedEvent, CellStyle } from "ag-grid-community";
+import { useEffect, useState } from "react";
 import { DetailModal } from "./DetailModal";
 
 interface WeeklyForecast {
@@ -27,16 +25,6 @@ interface CategoryForecast {
   sortOrder: number;
 }
 
-interface GridRow {
-  category: string;
-  displayGroup: string;
-  categoryCode: string;
-  isSection: boolean;
-  isTotal: boolean;
-  isCashBalance: boolean;
-  [key: string]: any;
-}
-
 export function ForecastGrid() {
   const [weeks, setWeeks] = useState<WeeklyForecast[]>([]);
   const [loading, setLoading] = useState(true);
@@ -50,156 +38,604 @@ export function ForecastGrid() {
 
   useEffect(() => {
     fetch("/api/forecast/weeks?weeksCount=26")
-      .then(r => r.json())
-      .then(data => {
-        console.log("API response:", data);
+      .then((r) => r.json())
+      .then((data) => {
         if (data.success) setWeeks(data.weeks);
       })
       .finally(() => setLoading(false));
   }, []);
 
-  const rowData = useMemo(() => {
-    console.log("rowData useMemo - weeks:", weeks);
-    if (!weeks.length) return [];
-
-    const rows: GridRow[] = [];
-    const allCats = new Map<string, CategoryForecast>();
-    weeks.forEach(w => w.categories.forEach(c => allCats.set(c.categoryCode, c)));
-    console.log("allCats size:", allCats.size);
-
-    const addRow = (cat: CategoryForecast) => {
-      const row: GridRow = {
-        category: cat.displayLabel + (cat.displayLabel2 ? ` - ${cat.displayLabel2}` : ""),
-        displayGroup: cat.displayGroup,
-        categoryCode: cat.categoryCode,
-        isSection: false,
-        isTotal: false,
-        isCashBalance: false,
-      };
-      weeks.forEach(w => {
-        const wc = w.categories.find(c => c.categoryCode === cat.categoryCode);
-        row[`week_${w.weekEnding}`] = wc?.amount ?? 0;
-        row[`week_${w.weekEnding}_isActual`] = wc?.isActual ?? false;
-      });
-      rows.push(row);
-    };
-
-    // Beginning Cash + Inflows (only once)
-    if (weeks.length > 0) {
-      rows.push({ category: "Beginning Cash", displayGroup: "CASH BALANCE", categoryCode: "beginning", isSection: false, isTotal: true, isCashBalance: true, ...weeks.reduce((a, ww) => ({ ...a, [`week_${ww.weekEnding}`]: ww.beginningCash }), {}) });
-      rows.push({ category: "CASH INFLOWS", displayGroup: "CASH INFLOWS", categoryCode: "section_in", isSection: true, isTotal: false, isCashBalance: false });
-      Array.from(allCats.values()).filter(c => c.displayGroup === "AR").sort((a,b) => a.sortOrder - b.sortOrder).forEach(addRow);
-      rows.push({ category: "Total Inflows", displayGroup: "CASH INFLOWS", categoryCode: "total_in", isSection: false, isTotal: true, isCashBalance: false, ...weeks.reduce((a, ww) => ({ ...a, [`week_${ww.weekEnding}`]: ww.totalInflows }), {}) });
-    }
-
-    // Outflow sections
-    ["Labor", "COGS", "Facilities", "NL Opex"].forEach(group => {
-      const cats = Array.from(allCats.values()).filter(c => c.displayGroup === group).sort((a,b) => a.sortOrder - b.sortOrder);
-      if (cats.length === 0) return;
-      rows.push({ category: group.toUpperCase(), displayGroup: group, categoryCode: `section_${group}`, isSection: true, isTotal: false, isCashBalance: false });
-      cats.forEach(addRow);
+  const formatCurrency = (value: number) => {
+    const abs = Math.abs(value);
+    const formatted = abs.toLocaleString("en-US", {
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0,
     });
-
-    rows.push({ category: "Total Outflows", displayGroup: "CASH OUTFLOWS", categoryCode: "total_out", isSection: false, isTotal: true, isCashBalance: false, ...weeks.reduce((a, ww) => ({ ...a, [`week_${ww.weekEnding}`]: -ww.totalOutflows }), {}) });
-    rows.push({ category: "Net Cash Flow", displayGroup: "SUMMARY", categoryCode: "net", isSection: false, isTotal: true, isCashBalance: false, ...weeks.reduce((a, ww) => ({ ...a, [`week_${ww.weekEnding}`]: ww.netCashFlow }), {}) });
-    rows.push({ category: "Ending Cash", displayGroup: "CASH BALANCE", categoryCode: "ending", isSection: false, isTotal: true, isCashBalance: true, ...weeks.reduce((a, ww) => ({ ...a, [`week_${ww.weekEnding}`]: ww.endingCash }), {}) });
-
-    console.log("Generated rows:", rows.length, rows);
-    return rows;
-  }, [weeks]);
-
-  const currencyFormatter = (p: ValueFormatterParams) => {
-    const v = p.value ?? 0;
-    return v < 0 ? `($${Math.abs(v).toLocaleString()})` : `$${v.toLocaleString()}`;
+    return value < 0 ? `($${formatted})` : `$${formatted}`;
   };
 
-  const columnDefs = useMemo<ColDef[]>(() => [
-    {
-      field: "category",
-      headerName: "Category",
-      pinned: "left",
-      width: 220,
-      cellStyle: (p): CellStyle => {
-        if (p.data?.isSection) {
-          return { fontWeight: "700", fontSize: "11px", textTransform: "uppercase", color: "#1e3a1e", backgroundColor: "rgba(248,250,249,0.95)" };
-        }
-        if (p.data?.isTotal) {
-          return { fontWeight: "600", backgroundColor: "rgba(248,250,249,0.8)" };
-        }
-        return {};
-      }
-    },
-    ...weeks.map(w => ({
-      field: `week_${w.weekEnding}`,
-      headerName: `Week Ending ${new Date(w.weekEnding).toLocaleDateString("en-US", { month: "short", day: "numeric" })}`,
-      width: 140,
-      valueFormatter: currencyFormatter,
-      cellStyle: (p: any): CellStyle => ({ color: (p.value ?? 0) >= 0 ? "#059669" : "#dc2626" }),
-      cellClass: (p: CellClassParams) => p.data?.[`week_${w.weekEnding}_isActual`] ? "amount-actual" : "amount-forecast",
-      onCellDoubleClicked: (p: CellDoubleClickedEvent) => {
-        if (!p.data?.isSection && !p.data?.isCashBalance) {
-          setModalState({
-            isOpen: true,
-            title: p.data.category,
-            category: p.data.displayGroup,
-            weekEnding: w.weekEnding,
-            amount: p.value || 0
-          });
-        }
-      },
-    }))
-  ], [weeks]);
+  const formatDate = (dateStr: string) => {
+    const d = new Date(dateStr);
+    return d.toLocaleDateString("en-US", { month: "2-digit", day: "2-digit", year: "2-digit" });
+  };
 
-  if (loading) return <div className="flex items-center justify-center h-screen text-slate-600">Loading...</div>;
+  const formatWeekLabel = (dateStr: string) => {
+    const d = new Date(dateStr);
+    const startOfYear = new Date(d.getFullYear(), 0, 1);
+    const diff = d.getTime() - startOfYear.getTime();
+    const oneWeek = 1000 * 60 * 60 * 24 * 7;
+    const weekNum = Math.ceil(diff / oneWeek);
+    return `Week ${weekNum}`;
+  };
+
+  const getCategoryAmount = (week: WeeklyForecast, categoryCode: string): number => {
+    const cat = week.categories.find((c) => c.categoryCode === categoryCode);
+    return cat?.amount || 0;
+  };
+
+  const isCategoryActual = (week: WeeklyForecast, categoryCode: string): boolean => {
+    const cat = week.categories.find((c) => c.categoryCode === categoryCode);
+    return cat?.isActual || false;
+  };
+
+  const getCategoriesByGroup = (group: string): CategoryForecast[] => {
+    const allCats = new Map<string, CategoryForecast>();
+    weeks.forEach((w) => w.categories.forEach((c) => allCats.set(c.categoryCode, c)));
+    return Array.from(allCats.values())
+      .filter((c) => c.displayGroup === group)
+      .sort((a, b) => a.sortOrder - b.sortOrder);
+  };
+
+  const handleAmountClick = (category: string, weekEnding: string, amount: number) => {
+    setModalState({
+      isOpen: true,
+      title: `${category} - ${formatDate(weekEnding)}`,
+      category,
+      weekEnding,
+      amount,
+    });
+  };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center" style={{ height: "calc(100vh - 200px)" }}>
+        <div className="text-slate-600 text-sm">Loading forecast data...</div>
+      </div>
+    );
+  }
+
+  if (weeks.length === 0) {
+    return (
+      <div className="flex items-center justify-center" style={{ height: "calc(100vh - 200px)" }}>
+        <div className="text-slate-600 text-sm">No forecast data available</div>
+      </div>
+    );
+  }
+
+  // Determine current week (approximate)
+  const today = new Date();
+  const currentWeekIndex = weeks.findIndex((w) => new Date(w.weekEnding) >= today);
 
   return (
     <>
-      <div className="ag-theme-quartz w-full" style={{ height: "calc(100vh - 180px)" }}>
-        <AgGridReact
-          rowData={rowData}
-          columnDefs={columnDefs}
-          defaultColDef={{ resizable: true, sortable: false }}
-          suppressMovableColumns
-          domLayout="normal"
-          headerHeight={44}
-          rowHeight={36}
-        />
+      <div className="forecast-table-wrapper">
+        <table className="forecast-table">
+          <thead>
+            <tr className="week-header">
+              <th className="category-header">Cash Flow Item</th>
+              {weeks.map((w, i) => (
+                <th key={w.weekEnding} className={i === currentWeekIndex ? "current-week" : ""}>
+                  {formatWeekLabel(w.weekEnding)}
+                </th>
+              ))}
+            </tr>
+            <tr className="week-dates">
+              <td></td>
+              {weeks.map((w, i) => (
+                <td key={w.weekEnding} className={i === currentWeekIndex ? "current-week" : ""}>
+                  {formatDate(w.weekEnding)}
+                </td>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {/* Beginning Cash */}
+            <tr className="section-header cash-balance">
+              <td colSpan={weeks.length + 1}>CASH BALANCE</td>
+            </tr>
+            <tr className="data-row total-row">
+              <td className="category-cell" title="Starting cash position for each period">
+                Beginning Cash
+              </td>
+              {weeks.map((w) => (
+                <td key={w.weekEnding} className={`amount-cell amount-positive amount-actual`}>
+                  {formatCurrency(w.beginningCash)}
+                </td>
+              ))}
+            </tr>
+
+            {/* Cash Inflows */}
+            <tr className="section-header cash-inflows">
+              <td colSpan={weeks.length + 1}>CASH INFLOWS</td>
+            </tr>
+            {getCategoriesByGroup("AR").map((cat) => (
+              <tr key={cat.categoryCode} className="data-row">
+                <td className="category-cell" title={cat.displayLabel}>
+                  {cat.displayLabel}
+                </td>
+                {weeks.map((w) => {
+                  const amount = getCategoryAmount(w, cat.categoryCode);
+                  const isActual = isCategoryActual(w, cat.categoryCode);
+                  return (
+                    <td
+                      key={w.weekEnding}
+                      className={`amount-cell ${amount >= 0 ? "amount-positive" : "amount-negative"} ${
+                        isActual ? "amount-actual" : "amount-forecast"
+                      } ${amount !== 0 ? "clickable-amount" : ""}`}
+                      onClick={() => amount !== 0 && handleAmountClick(cat.displayLabel, w.weekEnding, amount)}
+                    >
+                      {amount !== 0 ? formatCurrency(amount) : "$0"}
+                    </td>
+                  );
+                })}
+              </tr>
+            ))}
+            <tr className="data-row total-row">
+              <td className="category-cell">Total Inflows</td>
+              {weeks.map((w) => (
+                <td key={w.weekEnding} className="amount-cell amount-positive amount-actual">
+                  {formatCurrency(w.totalInflows)}
+                </td>
+              ))}
+            </tr>
+
+            {/* Labor */}
+            {getCategoriesByGroup("Labor").length > 0 && (
+              <>
+                <tr className="section-header labor">
+                  <td colSpan={weeks.length + 1}>LABOR</td>
+                </tr>
+                {getCategoriesByGroup("Labor").map((cat) => (
+                  <tr key={cat.categoryCode} className="data-row">
+                    <td className="category-cell" title={cat.displayLabel}>
+                      {cat.displayLabel}
+                    </td>
+                    {weeks.map((w) => {
+                      const amount = getCategoryAmount(w, cat.categoryCode);
+                      const isActual = isCategoryActual(w, cat.categoryCode);
+                      return (
+                        <td
+                          key={w.weekEnding}
+                          className={`amount-cell ${amount >= 0 ? "amount-positive" : "amount-negative"} ${
+                            isActual ? "amount-actual" : "amount-forecast"
+                          } ${amount !== 0 ? "clickable-amount" : ""}`}
+                          onClick={() => amount !== 0 && handleAmountClick(cat.displayLabel, w.weekEnding, amount)}
+                        >
+                          {amount !== 0 ? formatCurrency(amount) : "$0"}
+                        </td>
+                      );
+                    })}
+                  </tr>
+                ))}
+              </>
+            )}
+
+            {/* COGS */}
+            {getCategoriesByGroup("COGS").length > 0 && (
+              <>
+                <tr className="section-header cogs">
+                  <td colSpan={weeks.length + 1}>COGS</td>
+                </tr>
+                {getCategoriesByGroup("COGS").map((cat) => (
+                  <tr key={cat.categoryCode} className="data-row">
+                    <td className="category-cell" title={cat.displayLabel}>
+                      {cat.displayLabel}
+                    </td>
+                    {weeks.map((w) => {
+                      const amount = getCategoryAmount(w, cat.categoryCode);
+                      const isActual = isCategoryActual(w, cat.categoryCode);
+                      return (
+                        <td
+                          key={w.weekEnding}
+                          className={`amount-cell ${amount >= 0 ? "amount-positive" : "amount-negative"} ${
+                            isActual ? "amount-actual" : "amount-forecast"
+                          } ${amount !== 0 ? "clickable-amount" : ""}`}
+                          onClick={() => amount !== 0 && handleAmountClick(cat.displayLabel, w.weekEnding, amount)}
+                        >
+                          {amount !== 0 ? formatCurrency(amount) : "$0"}
+                        </td>
+                      );
+                    })}
+                  </tr>
+                ))}
+              </>
+            )}
+
+            {/* Facilities */}
+            {getCategoriesByGroup("Facilities").length > 0 && (
+              <>
+                <tr className="section-header facilities">
+                  <td colSpan={weeks.length + 1}>FACILITIES</td>
+                </tr>
+                {getCategoriesByGroup("Facilities").map((cat) => (
+                  <tr key={cat.categoryCode} className="data-row">
+                    <td className="category-cell" title={cat.displayLabel}>
+                      {cat.displayLabel}
+                    </td>
+                    {weeks.map((w) => {
+                      const amount = getCategoryAmount(w, cat.categoryCode);
+                      const isActual = isCategoryActual(w, cat.categoryCode);
+                      return (
+                        <td
+                          key={w.weekEnding}
+                          className={`amount-cell ${amount >= 0 ? "amount-positive" : "amount-negative"} ${
+                            isActual ? "amount-actual" : "amount-forecast"
+                          } ${amount !== 0 ? "clickable-amount" : ""}`}
+                          onClick={() => amount !== 0 && handleAmountClick(cat.displayLabel, w.weekEnding, amount)}
+                        >
+                          {amount !== 0 ? formatCurrency(amount) : "$0"}
+                        </td>
+                      );
+                    })}
+                  </tr>
+                ))}
+              </>
+            )}
+
+            {/* NL Opex */}
+            {getCategoriesByGroup("NL Opex").length > 0 && (
+              <>
+                <tr className="section-header opex">
+                  <td colSpan={weeks.length + 1}>NL OPEX</td>
+                </tr>
+                {getCategoriesByGroup("NL Opex").map((cat) => (
+                  <tr key={cat.categoryCode} className="data-row">
+                    <td className="category-cell" title={cat.displayLabel}>
+                      {cat.displayLabel}
+                    </td>
+                    {weeks.map((w) => {
+                      const amount = getCategoryAmount(w, cat.categoryCode);
+                      const isActual = isCategoryActual(w, cat.categoryCode);
+                      return (
+                        <td
+                          key={w.weekEnding}
+                          className={`amount-cell ${amount >= 0 ? "amount-positive" : "amount-negative"} ${
+                            isActual ? "amount-actual" : "amount-forecast"
+                          } ${amount !== 0 ? "clickable-amount" : ""}`}
+                          onClick={() => amount !== 0 && handleAmountClick(cat.displayLabel, w.weekEnding, amount)}
+                        >
+                          {amount !== 0 ? formatCurrency(amount) : "$0"}
+                        </td>
+                      );
+                    })}
+                  </tr>
+                ))}
+              </>
+            )}
+
+            {/* Other/Unclassified */}
+            {getCategoriesByGroup("Other").length > 0 && (
+              <>
+                <tr className="section-header other">
+                  <td colSpan={weeks.length + 1}>OTHER</td>
+                </tr>
+                {getCategoriesByGroup("Other").map((cat) => (
+                  <tr key={cat.categoryCode} className="data-row">
+                    <td className="category-cell" title={cat.displayLabel}>
+                      {cat.displayLabel}
+                    </td>
+                    {weeks.map((w) => {
+                      const amount = getCategoryAmount(w, cat.categoryCode);
+                      const isActual = isCategoryActual(w, cat.categoryCode);
+                      return (
+                        <td
+                          key={w.weekEnding}
+                          className={`amount-cell ${amount >= 0 ? "amount-positive" : "amount-negative"} ${
+                            isActual ? "amount-actual" : "amount-forecast"
+                          } ${amount !== 0 ? "clickable-amount" : ""}`}
+                          onClick={() => amount !== 0 && handleAmountClick(cat.displayLabel, w.weekEnding, amount)}
+                        >
+                          {amount !== 0 ? formatCurrency(amount) : "$0"}
+                        </td>
+                      );
+                    })}
+                  </tr>
+                ))}
+              </>
+            )}
+
+            {/* Totals */}
+            <tr className="data-row total-row">
+              <td className="category-cell">Total Outflows</td>
+              {weeks.map((w) => (
+                <td key={w.weekEnding} className="amount-cell amount-negative amount-actual">
+                  {formatCurrency(-w.totalOutflows)}
+                </td>
+              ))}
+            </tr>
+            <tr className="data-row total-row">
+              <td className="category-cell" title="Net change in cash position for each period">
+                Net Cash Flow
+              </td>
+              {weeks.map((w) => (
+                <td
+                  key={w.weekEnding}
+                  className={`amount-cell ${w.netCashFlow >= 0 ? "amount-positive" : "amount-negative"} amount-actual`}
+                >
+                  {formatCurrency(w.netCashFlow)}
+                </td>
+              ))}
+            </tr>
+            <tr className="data-row total-row">
+              <td className="category-cell" title="Projected cash balance at end of each period">
+                Ending Cash
+              </td>
+              {weeks.map((w) => (
+                <td
+                  key={w.weekEnding}
+                  className={`amount-cell ${w.endingCash >= 0 ? "amount-positive" : "amount-negative"} amount-actual`}
+                >
+                  {formatCurrency(w.endingCash)}
+                </td>
+              ))}
+            </tr>
+          </tbody>
+        </table>
       </div>
-      <DetailModal {...modalState} onClose={() => setModalState(s => ({ ...s, isOpen: false }))} />
-      <style jsx global>{`
-        .ag-theme-quartz {
-          --ag-font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", Inter, system-ui, sans-serif;
-          --ag-font-size: 12px;
-          --ag-header-height: 44px;
-          --ag-header-foreground-color: white;
-          --ag-header-background-color: linear-gradient(135deg, #1e3a1e 0%, #2d5a2d 100%);
-          --ag-odd-row-background-color: rgba(255, 255, 255, 0.4);
-          --ag-row-hover-color: rgba(255, 255, 255, 0.8);
-          --ag-border-color: rgba(30, 58, 30, 0.08);
-          --ag-row-border-color: rgba(30, 58, 30, 0.05);
+
+      <DetailModal {...modalState} onClose={() => setModalState((s) => ({ ...s, isOpen: false }))} />
+
+      <style jsx>{`
+        .forecast-table-wrapper {
+          width: 100%;
+          overflow-x: auto;
+          max-height: calc(100vh - 200px);
+          overflow-y: auto;
         }
-        .ag-header {
+
+        .forecast-table {
+          width: 100%;
+          border-collapse: separate;
+          border-spacing: 0;
+          font-size: 12px;
+        }
+
+        /* Headers */
+        .week-header {
           background: linear-gradient(135deg, #1e3a1e 0%, #2d5a2d 100%);
-          border-bottom: 1px solid rgba(255, 255, 255, 0.15);
+          color: white;
+          position: sticky;
+          top: 0;
+          z-index: 20;
         }
-        .ag-header-cell {
+
+        .week-header th {
+          padding: 12px 8px;
+          text-align: center;
           border-right: 1px solid rgba(255, 255, 255, 0.15);
           font-weight: 600;
           font-size: 11px;
           letter-spacing: 0.025em;
           text-transform: uppercase;
+          height: 44px;
+          white-space: nowrap;
         }
-        .ag-cell {
-          display: flex;
-          align-items: center;
+
+        .week-header th:last-child {
+          border-right: none;
+        }
+
+        .week-header .category-header {
+          text-align: left;
+          width: 220px;
+          position: sticky;
+          left: 0;
+          background: linear-gradient(135deg, #0f172a 0%, #1e3a1e 100%);
+          z-index: 21;
+        }
+
+        .week-dates {
+          background: linear-gradient(135deg, rgba(248, 250, 249, 0.9) 0%, rgba(248, 250, 249, 0.7) 100%);
+          border-bottom: 1px solid rgba(30, 58, 30, 0.08);
+          position: sticky;
+          top: 44px;
+          z-index: 20;
+        }
+
+        .week-dates td {
+          padding: 8px;
+          text-align: center;
           border-right: 1px solid rgba(30, 58, 30, 0.06);
+          font-size: 10px;
+          color: #64748b;
+          font-weight: 500;
+          height: 32px;
         }
+
+        .week-dates td:first-child {
+          position: sticky;
+          left: 0;
+          background: linear-gradient(135deg, rgba(241, 245, 249, 0.9) 0%, rgba(241, 245, 249, 0.7) 100%);
+          z-index: 21;
+        }
+
+        .week-dates td:last-child {
+          border-right: none;
+        }
+
+        /* Current week highlight */
+        .current-week {
+          background: linear-gradient(135deg, #475569 0%, #64748b 100%) !important;
+          color: white !important;
+          position: relative;
+        }
+
+        .current-week::after {
+          content: "";
+          position: absolute;
+          bottom: 0;
+          left: 0;
+          right: 0;
+          height: 3px;
+          background: linear-gradient(90deg, #3b82f6 0%, #2563eb 100%);
+        }
+
+        /* Section headers */
+        .section-header td {
+          padding: 12px 8px;
+          font-weight: 700;
+          color: #1e3a1e;
+          text-transform: uppercase;
+          letter-spacing: 0.05em;
+          font-size: 11px;
+          background: linear-gradient(135deg, rgba(45, 90, 45, 0.08) 0%, rgba(45, 90, 45, 0.04) 100%);
+          border-left: 3px solid;
+          height: 40px;
+        }
+
+        .section-header.cash-balance td {
+          border-left-color: #1e3a1e;
+        }
+
+        .section-header.cash-inflows td {
+          border-left-color: #2d5a2d;
+        }
+
+        .section-header.labor td {
+          border-left-color: #3d6b3d;
+        }
+
+        .section-header.cogs td {
+          border-left-color: #4a7c4a;
+        }
+
+        .section-header.facilities td {
+          border-left-color: #4a7c4a;
+        }
+
+        .section-header.opex td {
+          border-left-color: #5e8e5e;
+        }
+
+        .section-header.other td {
+          border-left-color: #6b7280;
+        }
+
+        /* Data rows */
+        .data-row {
+          border-bottom: 1px solid rgba(30, 58, 30, 0.04);
+          transition: all 0.15s ease;
+        }
+
+        .data-row:hover {
+          background: linear-gradient(135deg, rgba(240, 248, 242, 0.4) 0%, rgba(240, 248, 242, 0.2) 100%);
+        }
+
+        .data-row td {
+          padding: 8px;
+          border-right: 1px solid rgba(30, 58, 30, 0.04);
+          text-align: right;
+          white-space: nowrap;
+          font-weight: 500;
+          background: rgba(255, 255, 255, 0.8);
+          height: 36px;
+          vertical-align: middle;
+        }
+
+        .data-row td:last-child {
+          border-right: none;
+        }
+
+        .category-cell {
+          text-align: left !important;
+          font-weight: 600;
+          color: #374151;
+          border-right: 1px solid rgba(30, 58, 30, 0.08) !important;
+          background: linear-gradient(135deg, rgba(250, 250, 250, 0.9) 0%, rgba(250, 250, 250, 0.7) 100%) !important;
+          cursor: help;
+          position: sticky;
+          left: 0;
+          z-index: 10;
+          width: 220px;
+          min-width: 220px;
+          max-width: 220px;
+        }
+
+        .category-cell:hover {
+          color: #2d5a2d;
+        }
+
+        /* Total rows */
+        .total-row {
+          background: linear-gradient(135deg, rgba(248, 250, 249, 0.9) 0%, rgba(248, 250, 249, 0.7) 100%);
+          font-weight: 700;
+          border-top: 2px solid rgba(45, 90, 45, 0.2);
+          border-bottom: 2px solid rgba(45, 90, 45, 0.2);
+        }
+
+        .total-row td {
+          padding: 10px 8px;
+          font-weight: 700;
+          height: 40px;
+        }
+
+        /* Amount styling */
+        .amount-cell {
+          font-variant-numeric: tabular-nums;
+        }
+
+        .amount-positive {
+          color: #059669;
+          font-weight: 600;
+        }
+
+        .amount-negative {
+          color: #dc2626;
+          font-weight: 600;
+        }
+
         .amount-actual {
+          font-weight: 700;
+          color: #0f172a;
+        }
+
+        .amount-forecast {
+          opacity: 0.85;
           font-weight: 500;
         }
-        .amount-forecast {
-          font-weight: 400;
-          opacity: 0.85;
+
+        .clickable-amount {
+          cursor: pointer;
+          text-decoration: underline;
+          text-decoration-color: rgba(59, 130, 246, 0.4);
+          transition: all 0.2s ease;
+        }
+
+        .clickable-amount:hover {
+          text-decoration-color: #3b82f6;
+          background: linear-gradient(135deg, rgba(240, 249, 255, 0.8) 0%, rgba(240, 249, 255, 0.4) 100%);
+          border-radius: 4px;
+        }
+
+        /* Scrollbar styling */
+        .forecast-table-wrapper::-webkit-scrollbar {
+          width: 8px;
+          height: 8px;
+        }
+
+        .forecast-table-wrapper::-webkit-scrollbar-track {
+          background: rgba(30, 58, 30, 0.05);
+          border-radius: 4px;
+        }
+
+        .forecast-table-wrapper::-webkit-scrollbar-thumb {
+          background: rgba(30, 58, 30, 0.2);
+          border-radius: 4px;
+          transition: background 0.2s ease;
+        }
+
+        .forecast-table-wrapper::-webkit-scrollbar-thumb:hover {
+          background: rgba(30, 58, 30, 0.3);
         }
       `}</style>
     </>
