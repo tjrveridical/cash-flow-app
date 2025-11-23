@@ -1,9 +1,29 @@
 import { NextResponse } from "next/server";
-import { ClassificationService } from "@/lib/services/classification-service";
+import { createClient } from "@supabase/supabase-js";
+import { classifyBatch } from "@/lib/classification/engine";
 
 export async function POST() {
-  const service = new ClassificationService();
-  const result = await service.classifyAll();
+  try {
+    const supabase = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!
+    );
 
-  return NextResponse.json(result);
+    const classifiedCount = await classifyBatch(1000, supabase);
+
+    return NextResponse.json({
+      success: true,
+      classifiedCount,
+      message: "Classification complete",
+    });
+  } catch (error) {
+    console.error("Classification API error:", error);
+    return NextResponse.json(
+      {
+        success: false,
+        error: error instanceof Error ? error.message : "Unknown error",
+      },
+      { status: 500 }
+    );
+  }
 }

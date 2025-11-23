@@ -87,6 +87,12 @@ export async function classifyBatch(
   limit: number,
   supabase: SupabaseClient
 ): Promise<number> {
+  // First check total raw transactions
+  const { data: allRaw, error: countError } = await supabase
+    .from("raw_transactions")
+    .select("id", { count: "exact" });
+  console.log(`Total raw_transactions: ${allRaw?.length || 0}`);
+
   // Find raw transactions that don't have a classification record yet
   const { data: unclassified, error: queryError } = await supabase
     .from("raw_transactions")
@@ -98,6 +104,9 @@ export async function classifyBatch(
     )
     .is("classified.id", null)
     .limit(limit);
+
+  console.log(`Unclassified found: ${unclassified?.length || 0}`);
+  console.log(`Query error:`, queryError);
 
   if (queryError) {
     console.error("Error querying unclassified transactions:", queryError);
