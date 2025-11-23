@@ -135,19 +135,20 @@ const KEYWORD_RULES: KeywordRule[] = [
 
 /**
  * Classify by GL account number
+ * Note: The GL account is in qb_account_name field (e.g., "6202 Rent")
  */
 function classifyByGLAccount(tx: RawTxInput): { categoryCode: string; label: string } | null {
-  if (!tx.qb_account_number) return null;
+  if (!tx.qb_account_name) return null;
 
-  // Extract the account number (first part before space or the whole string)
-  const accountNum = tx.qb_account_number.split(" ")[0];
+  // Extract the account number (first part before space)
+  const accountNum = tx.qb_account_name.split(" ")[0];
 
   // Direct match
   if (GL_RULES[accountNum]) {
     return GL_RULES[accountNum];
   }
 
-  // Prefix match (e.g., 6000-6999 for Opex)
+  // Prefix match (e.g., 5xxx for Labor, 6xxx for Opex)
   const numPrefix = accountNum.substring(0, 2);
   if (numPrefix === "50" || numPrefix === "51" || numPrefix === "52" || numPrefix === "53") {
     return { categoryCode: "labor_payroll", label: "Labor: Other" };
@@ -158,26 +159,33 @@ function classifyByGLAccount(tx: RawTxInput): { categoryCode: string; label: str
   if (numPrefix === "60" || numPrefix === "61" || numPrefix === "62" || numPrefix === "63") {
     return { categoryCode: "nl_opex_subscription", label: "Opex: Other" };
   }
+  if (numPrefix === "12") {
+    return { categoryCode: "ar_project", label: "AR: Accounts Receivable" };
+  }
+  if (numPrefix === "13") {
+    return { categoryCode: "other_other", label: "Other: Prepaid/Other Assets" };
+  }
 
   return null;
 }
 
 /**
- * Classify by GL account name
+ * Classify by GL account name keywords
+ * The qb_account_name field contains the GL account like "6202 Rent"
  */
 function classifyByGLAccountName(tx: RawTxInput): { categoryCode: string; label: string } | null {
   if (!tx.qb_account_name) return null;
 
   const name = normalize(tx.qb_account_name);
 
-  if (name.includes("rent")) return { categoryCode: "facilities_rent", label: "Opex: Rent" };
-  if (name.includes("telephone") || name.includes("phone")) return { categoryCode: "facilities_telephone", label: "Opex: Telephone" };
-  if (name.includes("bank") && name.includes("service")) return { categoryCode: "nl_opex_bank_service_charges", label: "Opex: Bank Fees" };
+  if (name.includes("rent")) return { categoryCode: "facilities_rent", label: "Facilities: Rent" };
+  if (name.includes("telephone") || name.includes("phone")) return { categoryCode: "facilities_telephone", label: "Facilities: Telephone" };
+  if (name.includes("bank service") || name.includes("bank fee")) return { categoryCode: "nl_opex_bank_service_charges", label: "Opex: Bank Fees" };
   if (name.includes("payroll") || name.includes("salary")) return { categoryCode: "labor_payroll", label: "Labor: Payroll" };
-  if (name.includes("accounts receivable")) return { categoryCode: "ar_project", label: "AR: Accounts Receivable" };
+  if (name.includes("accounts receivable")) return { categoryCode: "ar_project", label: "AR: Collections" };
   if (name.includes("accounts payable")) return { categoryCode: "other_other", label: "AP: Accounts Payable" };
-  if (name.includes("cash back")) return { categoryCode: "other_other", label: "Revenue: Cash Back Rewards" };
   if (name.includes("prepaid")) return { categoryCode: "other_other", label: "Other: Prepaid Expenses" };
+  if (name.includes("utilities")) return { categoryCode: "facilities_utilities", label: "Facilities: Utilities" };
 
   return null;
 }
@@ -211,7 +219,7 @@ export function applyRules(rawTx: RawTxInput): ClassificationRecord | null {
       categoryCode: result.categoryCode,
       classification: result.label,
       classificationSource: "rules",
-      notes: `Classified by GL account number: ${rawTx.qb_account_number}`,
+      notes: `Classified by GL account: ${rawTx.qb_account_name}`,
     };
   }
 
