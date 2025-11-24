@@ -67,7 +67,8 @@ export class ImportService {
       const { error } = await this.supabase.from("raw_transactions").insert({
         date: safeDate,
         amount: mapped.amount,
-        description: mapped.description,
+        name: mapped.name, // CSV Column E
+        description: mapped.description, // CSV Column F
         transaction_type: mapped.transaction_type,
         source_system: mapped.source_system,
         source_id: mapped.source_id,

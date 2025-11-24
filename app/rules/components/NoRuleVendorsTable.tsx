@@ -106,9 +106,9 @@ export function NoRuleVendorsTable({ transactions, onDataChange }: NoRuleVendors
   }
 
   function getTransactionDetails(tx: UnassignedTransaction) {
-    // Preference: description (column F) > name (column E)
-    const primary = tx.description || tx.name || "";
-    const secondary = tx.description && tx.name ? tx.name : "";
+    // Preference: name (column E) > description (column F) for bold row
+    const primary = tx.name || tx.description || "";
+    const secondary = tx.name && tx.description ? tx.description : "";
     return { primary, secondary };
   }
 

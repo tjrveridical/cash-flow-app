@@ -7,7 +7,8 @@ export interface RawCSVRow {
 export type MappedTransaction = {
   date: Date;
   amount: number;
-  description: string;
+  name: string; // CSV Column E (Name)
+  description: string; // CSV Column F (Memo/Description)
   transaction_type: string;
   source_system: SourceSystem;
   source_id: string;
