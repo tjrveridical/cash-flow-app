@@ -86,7 +86,6 @@ export async function POST(request: Request) {
             frequency: body.frequency,
             anchor_days: body.anchor_days,
             exception_rule: body.exception_rule || "move_later",
-            estimated_amount: 0, // Library rules have 0 amount
           })
           .select()
           .single();

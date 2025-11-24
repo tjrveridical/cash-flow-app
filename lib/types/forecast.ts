@@ -25,7 +25,6 @@ export interface PaymentRule {
   frequency: PaymentFrequency;
   anchor_days: number[]; // Structure varies by frequency
   exception_rule: ExceptionRule;
-  estimated_amount: number; // Default 0 for library rules
   category_code?: string | null;
   notes?: string | null;
   created_at: string;
@@ -56,16 +55,23 @@ export interface ForecastItemWithRule extends ForecastItem {
 // Forecast Transaction (Generated Future Payment)
 // =====================================================
 
+export type ForecastTransactionStatus = "pending" | "matched" | "missed";
+
 export interface ForecastTransaction {
   id: string;
   forecast_item_id: string;
   payment_date: string; // ISO date string
-  amount: number;
+  forecast_amount: number; // What we expect to pay
+  actual_amount?: number | null; // What we actually paid
+  actual_transaction_id?: string | null; // FK to raw_transactions
+  variance?: number | null; // actual_amount - forecast_amount
+  status: ForecastTransactionStatus;
   created_at: string;
 }
 
 export interface ForecastTransactionWithItem extends ForecastTransaction {
   forecast_item: ForecastItemWithRule;
+  actual_transaction?: RawTransaction | null;
 }
 
 // =====================================================
@@ -133,6 +139,11 @@ export interface BulkValidateRequest {
 
 export interface MarkOneTimeRequest {
   // No additional fields needed - just marks validated=true
+}
+
+export interface GenerateForecastRequest {
+  forecast_item_id: string;
+  weeks_ahead?: number; // Default 52
 }
 
 // =====================================================
@@ -222,4 +233,58 @@ export function formatAmount(amount: number): string {
     maximumFractionDigits: 2,
   });
   return amount < 0 ? `-$${formatted}` : `$${formatted}`;
+}
+
+/**
+ * Calculate variance percentage
+ * @param actual - actual amount paid
+ * @param forecast - forecasted amount
+ * @returns percentage variance (positive = overpaid, negative = underpaid)
+ */
+export function calculateVariancePercentage(actual: number, forecast: number): number {
+  if (forecast === 0) return 0;
+  return ((actual - forecast) / Math.abs(forecast)) * 100;
+}
+
+/**
+ * Get variance color coding based on percentage
+ * @param variancePercent - percentage variance from forecast
+ * @returns color class name
+ */
+export function getVarianceColor(variancePercent: number): {
+  bgClass: string;
+  textClass: string;
+  label: string;
+} {
+  const absVariance = Math.abs(variancePercent);
+
+  if (absVariance <= 5) {
+    return {
+      bgClass: "bg-green-50",
+      textClass: "text-green-700",
+      label: "On Target",
+    };
+  } else if (absVariance <= 15) {
+    return {
+      bgClass: "bg-yellow-50",
+      textClass: "text-yellow-700",
+      label: "Moderate Variance",
+    };
+  } else {
+    return {
+      bgClass: "bg-red-50",
+      textClass: "text-red-700",
+      label: "High Variance",
+    };
+  }
+}
+
+/**
+ * Format variance for display with sign and color indicator
+ */
+export function formatVariance(variance: number | null | undefined): string {
+  if (variance === null || variance === undefined) return "—";
+
+  const sign = variance > 0 ? "+" : "";
+  return `${sign}${formatAmount(variance)}`;
 }
