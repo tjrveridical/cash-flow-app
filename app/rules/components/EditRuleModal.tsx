@@ -92,11 +92,11 @@ export function EditRuleModal({ rule, onClose, onSuccess }: EditRuleModalProps) 
 
   return (
     <div
-      className="fixed inset-0 bg-slate-900/70 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+      className="fixed inset-0 bg-slate-900/70 backdrop-blur-sm z-50 flex items-start justify-center p-4 overflow-y-auto"
       onClick={onClose}
     >
       <div
-        className="bg-gradient-to-br from-white/95 to-white/90 backdrop-blur-xl rounded-2xl shadow-2xl border border-[#1e3a1e]/8 max-w-2xl w-full p-7 max-h-[90vh] overflow-y-auto"
+        className="bg-gradient-to-br from-white/95 to-white/90 backdrop-blur-xl rounded-2xl shadow-2xl border border-[#1e3a1e]/8 max-w-2xl w-full p-7 my-8 max-h-[calc(100vh-4rem)] overflow-y-auto"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex justify-between items-center mb-6 pb-4 border-b border-[#1e3a1e]/8">
