@@ -112,6 +112,11 @@ export function NoRuleVendorsTable({ transactions, onDataChange }: NoRuleVendors
     return { primary, secondary };
   }
 
+  function formatDate(dateStr: string) {
+    const d = new Date(dateStr);
+    return d.toLocaleDateString("en-US", { month: "2-digit", day: "2-digit", year: "2-digit" });
+  }
+
   const formatAmount = (amount: number) => {
     const abs = Math.abs(amount);
     return `-$${abs.toLocaleString("en-US", {
@@ -179,6 +184,17 @@ export function NoRuleVendorsTable({ transactions, onDataChange }: NoRuleVendors
                             {secondary}
                           </div>
                         )}
+                        <div className="flex gap-3 mt-1 text-[10px] text-slate-400">
+                          <span className="font-medium">
+                            {formatDate(tx.date)}
+                          </span>
+                          {tx.qb_account_name && (
+                            <>
+                              <span>•</span>
+                              <span className="truncate">{tx.qb_account_name}</span>
+                            </>
+                          )}
+                        </div>
                       </div>
                     </td>
                     <td className="px-3 py-2.5">

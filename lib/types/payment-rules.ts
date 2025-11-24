@@ -48,10 +48,11 @@ export interface VendorRuleAssignmentWithDetails extends VendorRuleAssignment {
 
 export interface UnassignedTransaction {
   id: string;
-  date: string;
+  date: string; // CSV column B (Transaction Date)
   amount: number;
   name?: string | null; // CSV column E
   description?: string | null; // CSV column F
+  qb_account_name?: string | null; // CSV column H (Account Full Name)
   source_system: string;
 }
 

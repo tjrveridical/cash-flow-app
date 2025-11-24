@@ -18,7 +18,13 @@ export async function GET() {
       .from("raw_transactions")
       .select(
         `
-        *,
+        id,
+        date,
+        amount,
+        name,
+        description,
+        qb_account_name,
+        source_system,
         assignment:vendor_rule_assignments!transaction_id (id)
       `
       )
