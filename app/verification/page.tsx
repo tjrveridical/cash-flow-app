@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { EditTransactionModal } from "./components/EditTransactionModal";
 
 interface UnverifiedTransaction {
   id: string;
@@ -35,6 +36,7 @@ export default function VerificationPage() {
   const [stats, setStats] = useState<Stats>({ pendingCount: 0, totalAmount: 0, needsClassification: 0 });
   const [loading, setLoading] = useState(true);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [editingTransaction, setEditingTransaction] = useState<UnverifiedTransaction | null>(null);
 
   useEffect(() => {
     fetchUnverifiedTransactions();
@@ -113,6 +115,39 @@ export default function VerificationPage() {
     } catch (error) {
       console.error("Error verifying transactions:", error);
       alert("An error occurred while verifying transactions");
+    }
+  };
+
+  const handleEdit = (transaction: UnverifiedTransaction) => {
+    setEditingTransaction(transaction);
+  };
+
+  const handleSaveEdit = async (categoryCode: string) => {
+    if (!editingTransaction) return;
+
+    try {
+      const response = await fetch("/api/verification/edit", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          id: editingTransaction.id,
+          category_code: categoryCode,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        console.log("Successfully updated classification");
+        // Refresh the unverified transactions list
+        await fetchUnverifiedTransactions();
+      } else {
+        console.error("Update failed:", data.error);
+        throw new Error(data.error);
+      }
+    } catch (error) {
+      console.error("Error updating transaction:", error);
+      throw error;
     }
   };
 
@@ -524,6 +559,7 @@ export default function VerificationPage() {
                               letterSpacing: '0.01em',
                               border: '1px solid transparent',
                             }}
+                            onClick={() => handleEdit(tx)}
                             onMouseEnter={(e) => {
                               e.currentTarget.style.background = 'linear-gradient(135deg, #d97706 0%, #b45309 100%)';
                               e.currentTarget.style.transform = 'translateY(-1px)';
@@ -768,6 +804,15 @@ export default function VerificationPage() {
           )}
         </div>
       </div>
+
+      {/* Edit Modal */}
+      {editingTransaction && (
+        <EditTransactionModal
+          transaction={editingTransaction}
+          onClose={() => setEditingTransaction(null)}
+          onSave={handleSaveEdit}
+        />
+      )}
     </div>
   );
 }
