@@ -281,26 +281,25 @@ export function EditTransactionModal({ transaction, onClose, onSave }: EditTrans
                         <Combobox.Option
                           key={cat.category_code}
                           value={cat.category_code}
-                          className={({ active }) =>
-                            `relative cursor-pointer select-none py-2.5 px-4 transition-all ${
-                              active ? "" : ""
-                            }`
-                          }
-                          style={({ active, selected }) => ({
-                            background: selected
-                              ? 'linear-gradient(135deg, #2d5a2d 0%, #3d6b3d 100%)'
-                              : active
-                              ? 'rgba(240, 248, 242, 0.5)'
-                              : 'transparent',
-                            color: selected ? 'white' : '#1e293b',
-                            fontWeight: selected ? 600 : 500,
-                            letterSpacing: '-0.01em',
-                          })}
                         >
-                          {({ selected }) => (
-                            <span className={`block truncate ${selected ? '' : ''}`}>
-                              {formatCategoryLabel(cat)}
-                            </span>
+                          {({ active, selected }) => (
+                            <div
+                              className="relative cursor-pointer select-none py-2.5 px-4 transition-all"
+                              style={{
+                                background: selected
+                                  ? 'linear-gradient(135deg, #2d5a2d 0%, #3d6b3d 100%)'
+                                  : active
+                                  ? 'rgba(240, 248, 242, 0.5)'
+                                  : 'transparent',
+                                color: selected ? 'white' : '#1e293b',
+                                fontWeight: selected ? 600 : 500,
+                                letterSpacing: '-0.01em',
+                              }}
+                            >
+                              <span className="block truncate">
+                                {formatCategoryLabel(cat)}
+                              </span>
+                            </div>
                           )}
                         </Combobox.Option>
                       ))
