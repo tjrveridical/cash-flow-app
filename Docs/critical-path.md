@@ -591,9 +591,9 @@ Complete forecast dashboard with AG-Grid, matching mockup design exactly. Fully 
 
 ---
 
-## 6. Payment Rules & Recurring Outflows (Phase 3)
+## 7. Payment Rules & Recurring Outflows (Phase 3)
 
-### 6.1 Rule Types
+### 7.1 Rule Types
 - Payroll cycles  
 - Rent schedules  
 - Subscriptions  
@@ -602,20 +602,20 @@ Complete forecast dashboard with AG-Grid, matching mockup design exactly. Fully 
 - Taxes  
 - Loan/lease schedules  
 
-### 6.2 Payment Rule Engine
+### 7.2 Payment Rule Engine
 Generates synthetic future transactions using:
 - `anchor_day`, `anchor_type`, `frequency`
 - Business-day adjustment
 - Conditional logic
 
-### 6.3 Integration With Forecast
+### 7.3 Integration With Forecast
 Future-dated items appear in weekly buckets alongside historical data.
 
 ---
 
-## 7. AR Estimation Module (Phase 4)
+## 8. AR Estimation Module (Phase 4)
 
-### 7.1 Features
+### 8.1 Features
 - Manual AR forecast inputs (4-week rolling)
 - Integrated with forecast dashboard  
 - v1: Manual inputs  
@@ -623,14 +623,14 @@ Future-dated items appear in weekly buckets alongside historical data.
 
 ---
 
-## 8. Future Enhancements
+## 9. Future Enhancements
 
-### 8.1 Scenario Planning
+### 9.1 Scenario Planning
 - **Employee Cost Engine:** fully burdened cost  
 - **Scenarios:** hiring, termination, cost-change, budget vs actual  
 - **“Can We Afford This Hire?”** – instant runway impact  
 
-### 8.2 Export Capabilities
+### 9.2 Export Capabilities
 - Excel export  
 - PDF reports  
 - API export  
