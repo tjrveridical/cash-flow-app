@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, Fragment } from "react";
+import { Combobox, Transition } from "@headlessui/react";
 
 interface UnverifiedTransaction {
   id: string;
@@ -40,6 +41,7 @@ interface EditTransactionModalProps {
 export function EditTransactionModal({ transaction, onClose, onSave }: EditTransactionModalProps) {
   const [categories, setCategories] = useState<Category[]>([]);
   const [selectedCategoryCode, setSelectedCategoryCode] = useState("");
+  const [query, setQuery] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -100,21 +102,21 @@ export function EditTransactionModal({ transaction, onClose, onSave }: EditTrans
     return d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
   };
 
-  // Group categories by display_group
-  const groupedCategories = categories.reduce((acc, cat) => {
-    if (!acc[cat.display_group]) {
-      acc[cat.display_group] = [];
-    }
-    acc[cat.display_group].push(cat);
-    return acc;
-  }, {} as Record<string, Category[]>);
-
   const formatCategoryLabel = (cat: Category) => {
     if (cat.display_label2) {
       return `${cat.display_group} > ${cat.display_label} > ${cat.display_label2}`;
     }
     return `${cat.display_group} > ${cat.display_label}`;
   };
+
+  // Filter categories based on search query
+  const filteredCategories =
+    query === ""
+      ? categories
+      : categories.filter((cat) => {
+          const label = formatCategoryLabel(cat).toLowerCase();
+          return label.includes(query.toLowerCase());
+        });
 
   if (!transaction) return null;
 
@@ -228,36 +230,85 @@ export function EditTransactionModal({ transaction, onClose, onSave }: EditTrans
             <label className="block text-[11px] uppercase mb-2" style={{ fontWeight: 600, color: '#475569', letterSpacing: '0.02em' }}>
               Category
             </label>
-            <select
-              value={selectedCategoryCode}
-              onChange={(e) => setSelectedCategoryCode(e.target.value)}
-              className="w-full px-4 py-3 text-sm rounded-lg transition-all"
-              style={{
-                background: 'rgba(255, 255, 255, 0.9)',
-                border: '1px solid rgba(30, 58, 30, 0.15)',
-                color: '#1e293b',
-                fontWeight: 500,
-              }}
-              onFocus={(e) => {
-                e.currentTarget.style.borderColor = '#2d5a2d';
-                e.currentTarget.style.boxShadow = '0 0 0 3px rgba(45, 90, 45, 0.1)';
-              }}
-              onBlur={(e) => {
-                e.currentTarget.style.borderColor = 'rgba(30, 58, 30, 0.15)';
-                e.currentTarget.style.boxShadow = 'none';
-              }}
-            >
-              <option value="">Select a category...</option>
-              {Object.entries(groupedCategories).map(([group, cats]) => (
-                <optgroup key={group} label={group}>
-                  {cats.map((cat) => (
-                    <option key={cat.category_code} value={cat.category_code}>
-                      {formatCategoryLabel(cat)}
-                    </option>
-                  ))}
-                </optgroup>
-              ))}
-            </select>
+            <Combobox value={selectedCategoryCode} onChange={setSelectedCategoryCode}>
+              <div className="relative">
+                <Combobox.Input
+                  className="w-full px-4 py-3 text-sm rounded-lg transition-all"
+                  style={{
+                    background: 'rgba(255, 255, 255, 0.9)',
+                    border: '1px solid rgba(30, 58, 30, 0.15)',
+                    color: '#1e293b',
+                    fontWeight: 500,
+                    letterSpacing: '-0.01em',
+                  }}
+                  displayValue={(categoryCode: string) => {
+                    const cat = categories.find((c) => c.category_code === categoryCode);
+                    return cat ? formatCategoryLabel(cat) : "";
+                  }}
+                  onChange={(event) => setQuery(event.target.value)}
+                  placeholder="Search categories..."
+                  onFocus={(e) => {
+                    e.currentTarget.style.borderColor = '#2d5a2d';
+                    e.currentTarget.style.boxShadow = '0 0 0 3px rgba(45, 90, 45, 0.1)';
+                  }}
+                  onBlur={(e) => {
+                    e.currentTarget.style.borderColor = 'rgba(30, 58, 30, 0.15)';
+                    e.currentTarget.style.boxShadow = 'none';
+                  }}
+                />
+                <Transition
+                  as={Fragment}
+                  leave="transition ease-in duration-100"
+                  leaveFrom="opacity-100"
+                  leaveTo="opacity-0"
+                  afterLeave={() => setQuery("")}
+                >
+                  <Combobox.Options
+                    className="absolute z-10 mt-1 max-h-60 w-full overflow-auto rounded-lg py-1 text-sm shadow-lg"
+                    style={{
+                      background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.98) 0%, rgba(255, 255, 255, 0.95) 100%)',
+                      backdropFilter: 'blur(20px)',
+                      border: '1px solid rgba(30, 58, 30, 0.08)',
+                      boxShadow: '0 10px 30px rgba(30, 58, 30, 0.15)',
+                    }}
+                  >
+                    {filteredCategories.length === 0 && query !== "" ? (
+                      <div className="relative cursor-default select-none px-4 py-2" style={{ color: '#64748b' }}>
+                        No categories found.
+                      </div>
+                    ) : (
+                      filteredCategories.map((cat) => (
+                        <Combobox.Option
+                          key={cat.category_code}
+                          value={cat.category_code}
+                          className={({ active }) =>
+                            `relative cursor-pointer select-none py-2.5 px-4 transition-all ${
+                              active ? "" : ""
+                            }`
+                          }
+                          style={({ active, selected }) => ({
+                            background: selected
+                              ? 'linear-gradient(135deg, #2d5a2d 0%, #3d6b3d 100%)'
+                              : active
+                              ? 'rgba(240, 248, 242, 0.5)'
+                              : 'transparent',
+                            color: selected ? 'white' : '#1e293b',
+                            fontWeight: selected ? 600 : 500,
+                            letterSpacing: '-0.01em',
+                          })}
+                        >
+                          {({ selected }) => (
+                            <span className={`block truncate ${selected ? '' : ''}`}>
+                              {formatCategoryLabel(cat)}
+                            </span>
+                          )}
+                        </Combobox.Option>
+                      ))
+                    )}
+                  </Combobox.Options>
+                </Transition>
+              </div>
+            </Combobox>
           </div>
 
           {error && (
