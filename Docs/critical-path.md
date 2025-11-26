@@ -591,62 +591,417 @@ Complete forecast dashboard with AG-Grid, matching mockup design exactly. Fully 
 
 ---
 
-## 7. Payment Rules & Recurring Outflows (Phase 3)
+## 7. Payment Rules Engine (Step 1: Solo MVP)
 
-### 7.1 Rule Types
-- Payroll cycles  
-- Rent schedules  
-- Subscriptions  
-- Insurance  
-- Car/allowance  
-- Taxes  
-- Loan/lease schedules  
+**Purpose:** Generate synthetic future transactions for recurring outflows to populate forecast weeks beyond historical data.
 
-### 7.2 Payment Rule Engine
-Generates synthetic future transactions using:
-- `anchor_day`, `anchor_type`, `frequency`
-- Business-day adjustment
-- Conditional logic
+### 7.1 Payment Rules UI
+- Forest green design matching verification inbox and forecast dashboard
+- Glassmorphic cards with subtle gradients
+- Table view with vendor, category, frequency, amount, next payment date
+- Add/Edit/Delete buttons with modal workflows
+- Active/inactive toggle for seasonal rules
 
-### 7.3 Integration With Forecast
-Future-dated items appear in weekly buckets alongside historical data.
+### 7.2 Rule Creation & Management
+Core fields for rule definition:
+- **Vendor name** (e.g., "ADP Payroll", "Landlord - Main Office")
+- **Category code** (FK to `display_categories.category_code`)
+- **Frequency** (weekly, biweekly, monthly, quarterly, annual, custom)
+- **Anchor day** (day of week for weekly, day of month for monthly, or specific date)
+- **Amount** (fixed dollar value)
+- **Start date** and optional end date
+- **Active status** (boolean)
+
+### 7.3 Schema Simplification
+**Remove obligatory/discretionary distinction:**
+- Delete `is_obligatory` column from `payment_rules` table (if exists)
+- Remove from UI/API completely
+- All rules are treated equally in forecast projection
+- Rationale: Over-engineered for Solo MVP; adds no CFO value
+
+### 7.4 Payment Rule Engine
+Core algorithm for generating synthetic transactions:
+```typescript
+function generateProjectedPayments(rules: PaymentRule[], startDate: Date, endDate: Date) {
+  // For each active rule:
+  //   1. Calculate next occurrence after startDate using frequency + anchor
+  //   2. Apply business day adjustment (skip weekends/holidays)
+  //   3. Generate payment record with rule_id reference
+  //   4. Repeat until endDate reached
+  //   5. Return synthetic transactions array
+}
+```
+
+### 7.5 Business Day Logic
+Integration with `holidays` table:
+- Check if calculated payment date falls on weekend
+- Check if date exists in `holidays` table
+- If true: shift to previous business day (default) or next business day (configurable)
+- Edge case: Multiple consecutive holidays (iterate until valid business day found)
+
+### 7.6 Forecast Integration
+Merge synthetic and actual transactions:
+- Actual weeks: Show only `classified_bank_transactions` (historical data)
+- Future weeks: Show only synthetic payments from active rules
+- Cutoff: Latest transaction date in `raw_transactions`
+- Visual distinction: Font-weight 400 (forecast) vs 600 (actual), opacity 0.7 vs 1.0
+- DetailModal: Show "Projected from Rule: [Vendor]" instead of transaction list
+
+**API Endpoint:**
+`GET /api/forecast/weeks` updated to:
+- Fetch historical actuals (existing logic)
+- Call `generateProjectedPayments()` for future weeks
+- Merge and sort by week-ending date
+- Return unified weekly forecast array
+
+✅ **Milestone:** Payment rules engine complete. Forecast now shows 26+ weeks with future projections from recurring outflows. CFO can model runway with real recurring costs.
 
 ---
 
-## 8. AR Estimation Module (Phase 4)
+## 8. AR Estimation Module (Step 1: Solo MVP)
 
-### 8.1 Features
-- Manual AR forecast inputs (4-week rolling)
-- Integrated with forecast dashboard  
-- v1: Manual inputs  
-- v3/v4: Automated pull from hazard functions app  
+**Purpose:** Manual 4-week rolling AR forecast to populate "AR Collections" inflows in future weeks.
+
+### 8.1 AR Forecast UI
+- Forest green design matching verification inbox mockup (`ar-forecast.html`)
+- Glassmorphic table with 4-week columns
+- Row per customer with editable invoice details
+- Color-coded confidence levels (High = green, Medium = yellow, Low = red)
+- Add/Edit/Delete invoice rows
+- Total expected collections per week displayed
+
+### 8.2 Manual 4-Week Inputs
+Core fields for AR forecast entries:
+- **Customer name** (e.g., "Community Hospital - East Wing")
+- **Invoice number** (optional reference)
+- **Expected amount** (dollar value)
+- **Expected payment date** (specific date or week)
+- **Confidence level** (High 90%, Medium 70%, Low 40%)
+- **Notes** (e.g., "Pending approval", "Payment plan")
+
+Database table: `ar_forecast_entries`
+```sql
+CREATE TABLE ar_forecast_entries (
+  id uuid PRIMARY KEY,
+  customer_name text NOT NULL,
+  invoice_number text,
+  expected_amount numeric NOT NULL,
+  expected_date date NOT NULL,
+  confidence_level text CHECK (confidence_level IN ('high', 'medium', 'low')),
+  confidence_multiplier numeric DEFAULT 1.0,
+  notes text,
+  created_by uuid REFERENCES user_profiles(id),
+  created_at timestamptz DEFAULT now(),
+  updated_at timestamptz DEFAULT now()
+);
+```
+
+### 8.3 Forecast Integration
+Merge AR forecast with actual collections:
+- Historical weeks: Show actual "AR Collections" from `classified_bank_transactions`
+- Future weeks: Show sum of `expected_amount × confidence_multiplier` for that week
+- Display in "AR Collections" row (first inflow row in CASH INFLOWS section)
+- Visual distinction: Same opacity/font-weight as payment rule projections
+
+### 8.4 Confidence-Weighted Amounts
+Apply confidence multipliers:
+- **High confidence (90%):** `expected_amount × 0.9`
+- **Medium confidence (70%):** `expected_amount × 0.7`
+- **Low confidence (40%):** `expected_amount × 0.4`
+- Rationale: Conservative forecasting; avoid over-projecting runway
+
+### 8.5 Visual Distinction from Actuals
+Forecast grid styling for AR estimates:
+- Font-weight 400 (vs 600 for actuals)
+- Opacity 0.7 (vs 1.0 for actuals)
+- Italicized text
+- DetailModal: Show "Projected from AR Forecast: [Customer] - [Invoice]" with confidence chip
+
+**API Endpoint:**
+`GET /api/forecast/weeks` updated to:
+- Fetch historical AR actuals (existing AR Collections logic)
+- Query `ar_forecast_entries` for future dates
+- Apply confidence multipliers
+- Group by week-ending date
+- Return AR Collections with forecast flag
+
+### 8.6 CSV Import Redesign
+Polish existing `/app/import` page:
+- Replace generic styling with forest green theme
+- Glassmorphic file upload card matching other pages
+- Progress indicators with forest green color scheme
+- Error messages in red toast notifications (not inline text)
+- Success summary in green toast notification
+- Validation warnings displayed in amber chips
+
+### 8.7 Database Cleanup Audit
+Schema hygiene before multi-user rollout:
+- [ ] Remove unused columns from all tables
+- [ ] Document all foreign key relationships
+- [ ] Add missing indexes (e.g., `category_code`, `is_verified`, `date`)
+- [ ] Update column comments for clarity
+- [ ] Create database diagram (dbdiagram.io or similar)
+- [ ] Export clean schema.sql for version control
+
+### 8.8 Error Toasts & Loading Spinners
+Consistent UI feedback patterns:
+- **Toast library:** `react-hot-toast` or `sonner`
+- **Loading states:** Skeleton loaders for tables, spinners for buttons
+- **Error handling:** API errors → red toast, success → green toast
+- **Forest green toast theme:** Match button/header gradients
+- Apply to: Import, Verification, Forecast, AR Forecast, Payment Rules
+
+### 8.9 "Set Beginning Cash" Modal
+Implement stub button in forecast header:
+- Modal with glassmorphic design
+- Input fields: Bank account dropdown, As-of date picker, Balance amount
+- Inserts into `cash_balances` table
+- Updates "Beginning Cash" row in forecast grid
+- Validation: Prevent duplicate entries for same account/date combination
+- Use existing `cash_balances` table schema (Section 5.1)
+
+✅ **Milestone:** Solo MVP complete. Full 26-week forecast with payment rules, AR estimates, manual cash entries, and polished UX. Ready for multi-user testing with Travis, Controller, and Sr Accountant.
 
 ---
 
-## 9. Future Enhancements
+## 9. Multi-User Foundation (Step 2: Testing Phase)
 
-### 9.1 Scenario Planning
-- **Employee Cost Engine:** fully burdened cost  
-- **Scenarios:** hiring, termination, cost-change, budget vs actual  
-- **“Can We Afford This Hire?”** – instant runway impact  
+**Purpose:** Enable secure multi-user access for 3-5 power users (Travis, Controller, Sr Accountant) with proper authentication, audit trails, and import safety.
 
-### 9.2 Export Capabilities
-- Excel export  
-- PDF reports  
-- API export  
+### 9.1 Supabase Authentication Setup
+- Enable Auth in Supabase project settings
+- Configure email/password provider (no OAuth needed for v1)
+- Set up RLS (Row Level Security) policies on all tables
+- Create auth middleware for Next.js API routes
+- Update `user_profiles` table to sync with `auth.users`
+
+### 9.2 Auth UI Components
+- Login page at `/login` with forest green design
+- Sign-up page at `/signup` (initially disabled; manual user creation only)
+- Password reset flow
+- Session management with Supabase client
+- Protected routes: Redirect to `/login` if unauthenticated
+- Logout button in header with user email display
+
+### 9.3 Hardcoded Power Users
+Manual user provisioning for initial testing:
+- **Travis Reed** (travis@company.com) - Admin role
+- **Controller** (controller@company.com) - Power user role
+- **Sr Accountant** (accountant@company.com) - Power user role
+- Insert directly into `auth.users` via Supabase dashboard
+- No self-service signup; all accounts created by Travis
+
+### 9.4 Real verified_by from Auth Session
+Update verification workflow:
+- Replace hardcoded `"CFO"` with `session.user.email` or `user_id`
+- Update `classified_bank_transactions.verified_by` column to uuid FK
+- Display actual user name in verification history
+- Same for `created_by` in `ar_forecast_entries` and `payment_rules`
+
+### 9.5 CSV Import Safety
+Prevent duplicate imports and data corruption:
+- **File hash:** Calculate SHA-256 of uploaded CSV, store in `import_history.file_hash`
+- **Duplicate detection:** Check if file_hash exists before processing
+- **Transaction wrapper:** All imports in single database transaction (rollback on error)
+- **User attribution:** Record `imported_by` user_id in `import_history`
+- **Warning UI:** Show alert if importing same file twice
+
+### 9.6 Import History Tracking
+Expand `import_history` table:
+```sql
+ALTER TABLE import_history ADD COLUMN file_hash text;
+ALTER TABLE import_history ADD COLUMN imported_by uuid REFERENCES user_profiles(id);
+ALTER TABLE import_history ADD COLUMN rows_imported int;
+ALTER TABLE import_history ADD COLUMN rows_skipped int;
+ALTER TABLE import_history ADD COLUMN import_duration_ms int;
+CREATE INDEX idx_import_history_file_hash ON import_history(file_hash);
+```
+
+Display in `/app/import/history` page:
+- Table of all imports with user, timestamp, file name, counts
+- Filter by date range and user
+- "View Details" → modal with error log and skipped rows
+
+### 9.7 Production Deployment (Vercel)
+Deploy to Vercel with environment variables:
+- `NEXT_PUBLIC_SUPABASE_URL`
+- `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+- `SUPABASE_SERVICE_ROLE_KEY`
+- Custom domain: `forecast.company.com` (optional)
+- HTTPS enforced
+- Enable Vercel Analytics (optional)
+
+### 9.8 Feedback Collection Process
+Real-world usage testing (2-4 weeks):
+- **Weekly check-ins:** Travis meets with Controller + Sr Accountant
+- **Bug tracking:** Notion or Linear for issue reporting
+- **Feature requests:** Prioritize top 3 pain points for v1.1
+- **Data validation:** Compare forecast accuracy to actual results
+- **Performance monitoring:** Check page load times, query performance
+
+✅ **Milestone:** Multi-user foundation complete. 3-5 power users actively using the system with authentication, audit trails, and production deployment. Ready for leadership view-only access.
+
+---
+
+## 10. Leadership View Access (Step 3: Executive Rollout)
+
+**Purpose:** Grant view-only access to 5 leadership users (CEO, CFO, COO, etc.) with RBAC enforcement at UI and API levels.
+
+### 10.1 User Roles Table
+Extend `user_profiles` with role column:
+```sql
+ALTER TABLE user_profiles ADD COLUMN role text CHECK (role IN ('admin', 'power_user', 'view_only'));
+UPDATE user_profiles SET role = 'power_user' WHERE email IN ('travis@company.com', 'controller@company.com', 'accountant@company.com');
+```
+
+Role definitions:
+- **admin:** Full access (Travis only)
+- **power_user:** Edit/import/verify permissions (Controller, Sr Accountant)
+- **view_only:** Read-only access to forecast dashboard only (Leadership)
+
+### 10.2 RBAC UI Implementation
+Conditional rendering based on role:
+- Hide Import button if `role === 'view_only'`
+- Hide Verify/Edit buttons in verification inbox if `role === 'view_only'`
+- Hide "Add Rule" button in payment rules if `role === 'view_only'`
+- Hide "Set Beginning Cash" if `role === 'view_only'`
+- Show "View Only" badge in header for `view_only` users
+
+### 10.3 RBAC API Enforcement
+Server-side permission checks in API routes:
+```typescript
+// /api/verification/verify/route.ts
+const { data: profile } = await supabase
+  .from('user_profiles')
+  .select('role')
+  .eq('id', session.user.id)
+  .single();
+
+if (profile.role === 'view_only') {
+  return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+}
+```
+
+Apply to:
+- POST `/api/verification/verify`
+- POST `/api/verification/edit`
+- POST `/api/import`
+- POST `/api/payment-rules`
+- POST `/api/ar-forecast`
+
+### 10.4 Leadership Invites
+Manual provisioning for 5 leadership users:
+- Create accounts in Supabase dashboard
+- Set `role = 'view_only'` in `user_profiles`
+- Send login credentials via secure channel
+- Provide 5-minute onboarding video (Loom)
+- Grant access to `/forecast` only (redirect `/verification`, `/import`, etc. to `/forecast`)
+
+### 10.5 Scale Features (As Needed)
+Monitor performance after adding 5 view-only users. If needed:
+- **Pagination:** Limit verification inbox to 100 rows per page
+- **Search/Filter:** Add vendor search bar in verification inbox
+- **Audit Trail:** Log all user actions (verify, edit, import) to `audit_log` table
+- **Database indexes:** Ensure all queries use indexes (check `EXPLAIN ANALYZE`)
+- **Caching:** Redis for forecast API responses (if needed)
+
+✅ **Milestone:** Full team access complete (8-10 total users). Core V1 shipped. Leadership can view forecasts; power users maintain data. System stable under real-world usage.
+
+---
+
+## 11. Future Enhancements (Post-V1)
+
+### 11.1 Scenario Modeling (Step 4 - Separate Epic)
+**Purpose:** "What-if" analysis for hiring, terminations, and cost changes.
+
+#### Baseline Snapshots
+- Save current forecast state as "Baseline" scenario
+- Clone baseline to create new scenario
+- Scenarios stored in `forecast_scenarios` table with snapshot date
+
+#### What-If Adjustments
+- **Hire employee:** Add new row to Labor category with start date, salary, burden rate
+- **Fire employee:** Remove row or set end date
+- **Cost change:** Adjust payment rule amount (e.g., rent increase)
+- **Budget vs Actual:** Compare scenario to actual results over time
+
+#### Scenario Comparison UI
+- Dropdown in forecast header to switch between scenarios
+- Side-by-side view: Baseline vs Scenario A
+- Diff highlighting (green = favorable, red = unfavorable)
+- Impact summary: "This hire extends runway by 8 weeks" or "reduces cash by $50K"
+
+#### Employee Cost Engine
+Fully burdened cost calculation:
+- **Base salary**
+- **Payroll taxes** (7.65% FICA)
+- **Benefits** (health, 401k match, PTO accrual)
+- **Overhead allocation** (% of facilities, IT, admin costs)
+- Returns single monthly cost per employee
+
+#### Budget vs Actual Variance
+- Import budget from Excel or manual entry
+- Compare budget scenario to actual results
+- Variance report: Category-level over/under analysis
+- Alerts: Flag categories >10% over budget
+
+**Note:** Scenario modeling is a separate epic, not blocking V1 launch. Prioritize based on user feedback from Step 3.
+
+### 11.2 Export Capabilities
+- **Excel export:** Download forecast grid as .xlsx with formatting
+- **PDF reports:** Generate executive summary with charts
+- **API export:** JSON endpoint for integrations (e.g., Slack bot)
+
+### 11.3 Additional Future Ideas
+- **Mobile responsive:** Optimize forecast grid for tablet/phone
+- **Slack notifications:** Daily digest of unverified transactions
+- **QuickBooks OAuth:** Direct API sync (no CSV import)
+- **ML classification v2:** Fine-tune model with verified data
+- **Anomaly detection:** Flag unusual transactions for review  
 
 ---
 
 ## ✅ Summary Critical Path
 
-1. ✅ **Finish ingestion** (complete)
-2. ✅ **Build classification engine** (complete)
-3. ✅ **Build verification inbox** (complete)
-4. ✅ **Build weekly forecast engine** (complete)
-5. ✅ **Render forecast dashboard (Excel-style)** (complete)
-6. **Implement payment rules** ← next
-7. **Add AR estimation module**
-8. **Build scenario-planning engine**
+### Foundation (Complete ✅)
+1. ✅ **Data ingestion pipeline** (Section 2)
+2. ✅ **Classification engine** (Section 3)
+3. ✅ **Display category hierarchy** (Section 3.5)
+4. ✅ **Verification inbox** (Section 4)
+5. ✅ **Forecast engine** (Section 5)
+6. ✅ **Forecast dashboard** (Section 6)
+
+### Step 1: Solo MVP (Sections 7-8) ← CURRENT FOCUS
+7. **Payment rules engine** (Section 7.1-7.6)
+8. **AR estimation module** (Section 8.1-8.5)
+9. **Solo MVP polish** (Section 8.6-8.9)
+   - CSV import redesign
+   - Database cleanup audit
+   - Error toasts & loading spinners
+   - "Set Beginning Cash" modal
+
+**Target:** Fully functional 26-week forecast for Travis (solo user)
+
+### Step 2: Multi-User Foundation (Section 9)
+10. **Supabase authentication** (9.1-9.2)
+11. **Hardcoded power users** (9.3-9.4)
+12. **CSV import safety** (9.5-9.6)
+13. **Production deployment** (9.7)
+14. **Feedback collection** (9.8)
+
+**Target:** 3-5 power users testing in production (Travis, Controller, Sr Accountant)
+
+### Step 3: Leadership View Access (Section 10)
+15. **User roles & RBAC** (10.1-10.3)
+16. **Leadership invites** (10.4)
+17. **Scale features as needed** (10.5)
+
+**Target:** 8-10 total users (5 view-only leadership + 3-5 power users)
+
+### Step 4: Future Enhancements (Section 11)
+18. **Scenario modeling** (11.1) - Separate epic, not blocking V1
+19. **Export capabilities** (11.2)
+20. **Additional ideas** (11.3)
 
 ---
 
