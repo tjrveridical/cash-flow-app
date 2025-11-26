@@ -175,15 +175,217 @@ This ensured:
 - Stable display and row ordering  
 - Unified semantic vocabulary  
 
-✅ **Outcome:** Structural stability achieved; safe to proceed to Forecast Engine (4.1).
+✅ **Outcome:** Structural stability achieved; safe to proceed to Verification Inbox (Section 4).
 
 ---
 
-# 4. Forecast Engine
+# 4. Verification Inbox & Manual Review
+
+Purpose: CFO workflow for reviewing, correcting, and verifying auto-classified transactions before they enter the forecast.
+
+## 4.1 Database Schema Updates
+
+### Verification Columns Added to classified_bank_transactions
+```sql
+ALTER TABLE classified_bank_transactions
+ADD COLUMN is_verified BOOLEAN NOT NULL DEFAULT false,
+ADD COLUMN verified_at TIMESTAMPTZ,
+ADD COLUMN verified_by TEXT;
+```
+- **is_verified**: Indicates human review completion
+- **verified_at**: Timestamp of verification
+- **verified_by**: User identifier (e.g., 'CFO')
+- Partial index on `is_verified = false` for fast unverified queries
+
+### Foreign Key Constraint
+```sql
+ALTER TABLE classified_bank_transactions
+ADD CONSTRAINT fk_category_code
+FOREIGN KEY (category_code)
+REFERENCES display_categories(category_code);
+```
+- Required by PostgREST for JOIN operations in API queries
+- Enforces referential integrity at database level
+
+## 4.2 Verification Inbox UI (/app/verification)
+
+### Page Layout
+- **Header:** Forest green gradient title, Export/Verify All buttons, CFO badge
+- **Main Grid:** High-density table with transaction details
+- **Stats Sidebar:** Pending count, total amount, needs classification count
+- **Bulk Actions:** Appears when rows selected
+
+### Table Features
+- ✅ **Checkbox selection** with select all
+- ✅ **Sort by date** (newest first, sorted in JavaScript)
+- ✅ **Column headers:** Date, Vendor, Amount, Classification, Source, Actions
+- ✅ **Classification chips:** Purple (category), Orange (subcategory), Blue (subtype)
+- ✅ **Color-coded amounts:** Red negative, Green positive
+- ✅ **Row selection:** Blue gradient background on selected
+- ✅ **Hover effects:** Light forest green tint
+
+### Design System
+- **Forest green palette:** `#1e3a1e`, `#2d5a2d`, `#3d6b3d`
+- **Glassmorphic effects:** `backdrop-blur(20px-24px)`, semi-transparent white cards
+- **Typography:** Font-weight 650 (titles), 580 (vendors), 600 (chips), 550 (buttons)
+- **Letter spacing:** -0.014em (body), -0.02em (headings), 0.02em (uppercase)
+- **Shadows:** `0 4px 24px rgba(30, 58, 30, 0.04)`
+- **Borders:** `rgba(30, 58, 30, 0.08)`
+
+## 4.3 API Endpoints
+
+### GET /api/verification/unverified
+Fetches unverified transactions with joined category details:
+```typescript
+.from("classified_bank_transactions")
+.select(`
+  id, transaction_id, category_code,
+  transaction:raw_transactions (date, amount, name, description, source_system, transaction_type, qb_account_name),
+  category:display_categories (display_group, display_label, display_label2, cash_direction)
+`)
+.eq("is_verified", false)
+```
+- PostgREST FK-based joins (no hints needed)
+- Sorting moved to JavaScript (PostgREST doesn't support ordering by joined columns)
+- Returns 3-level category hierarchy with transaction context
+
+### POST /api/verification/verify
+Bulk verify transactions:
+```typescript
+.update({
+  is_verified: true,
+  verified_at: NOW(),
+  verified_by: 'CFO'
+})
+.in("id", ids)
+```
+- Accepts array of classification IDs
+- Marks transactions as verified
+- Returns count of updated records
+
+### GET /api/verification/categories
+Fetches all available categories for editing:
+```typescript
+.from("display_categories")
+.select("category_code, display_group, display_label, display_label2")
+.not("category_code", "is", null)
+.order("display_group", "display_label")
+```
+- Filters out null category_codes
+- Returns sorted category list for dropdown
+- Grouped by display_group
+
+### POST /api/verification/edit
+Update transaction classification:
+```typescript
+.update({
+  category_code: $category_code,
+  classification_source: 'manual',
+  classified_at: NOW()
+})
+.eq("id", $id)
+```
+- Changes category to user selection
+- Marks as manual classification
+- Updates timestamp
+
+## 4.4 Verify Button Implementation
+
+### Individual Verify
+- Button on each table row
+- `onClick={() => handleVerify(tx.id)}`
+- Updates single transaction
+- Removes from unverified list immediately
+
+### Bulk Verify Selected
+- Button in sidebar when rows selected
+- `onClick={() => handleVerify(Array.from(selectedIds))}`
+- Verifies multiple transactions at once
+- Clears selection after success
+
+### Verify All
+- Button in header
+- `onClick={() => handleVerify(transactions.map(t => t.id))}`
+- Verifies entire unverified inbox
+- Confirms action before proceeding
+
+### Behavior
+1. POST to `/api/verification/verify` with IDs
+2. On success: Clear selections, refresh unverified list
+3. Verified transactions disappear from inbox
+4. Stats update to reflect new counts
+
+## 4.5 Edit Modal (Searchable Category Selection)
+
+### EditTransactionModal Component
+- **Technology:** Headless UI Combobox with real-time search
+- **Design:** Glassmorphic overlay with forest green accents
+- **Transaction context:** Vendor, amount, date, description displayed at top
+
+### Searchable Combobox Features
+- ✅ **Type-to-search:** Case-insensitive substring matching
+- ✅ **Filter as you type:** Real-time category filtering
+- ✅ **Keyboard navigation:** ↑↓ arrows, Enter to select, Escape to close
+- ✅ **Display format:** "AR > AR Collections" or "COGS > Hardware > Nurse Call"
+- ✅ **Empty state:** "No categories found" when no matches
+- ✅ **Selected state:** Forest green gradient background `#2d5a2d → #3d6b3d`
+- ✅ **Hover state:** Light forest tint `rgba(240, 248, 242, 0.5)`
+
+### Dropdown Styling
+- **Input border:** `rgba(30, 58, 30, 0.15)`
+- **Focus ring:** `3px rgba(45, 90, 45, 0.1)` shadow with `#2d5a2d` border
+- **Dropdown background:** White gradient with `blur(20px)` backdrop
+- **Typography:** Font-weight 500, letter-spacing -0.01em
+- **Options:** Render prop pattern to access active/selected states
+
+### Edit Flow
+1. User clicks Edit button on transaction row
+2. Modal opens with transaction details and current category
+3. User types to search categories (e.g., "payroll", "cogs hardware")
+4. User selects new category from filtered list
+5. Click Save → POST to `/api/verification/edit`
+6. On success: Modal closes, transaction list refreshes with new classification
+7. Classification source automatically set to 'manual'
+
+### Defensive Filtering
+- **Database level:** Query excludes `category_code IS NULL`
+- **API level:** Logs warnings for null category_codes
+- **UI level:** Filters null values before rendering
+- **Fallback key:** Uses `index` if null slips through
+
+## 4.6 Data Flow
+
+```
+classified_bank_transactions (is_verified = false)
+  → GET /api/verification/unverified
+    → JOIN display_categories via category_code FK
+      → VerificationPage (/app/verification)
+        → Table display with Verify/Edit buttons
+          → EditTransactionModal (category search/select)
+            → POST /api/verification/edit (update classification)
+          → Verify button
+            → POST /api/verification/verify (mark verified)
+              → Transaction removed from inbox
+```
+
+## 4.7 Benefits
+
+1. **Quality Control:** Human review catches ML/rule errors before forecast
+2. **Audit Trail:** is_verified flag tracks manual review completion
+3. **Bulk Operations:** Efficient CFO workflow with multi-select
+4. **Searchable Edit:** Fast category correction with typeahead
+5. **Real-time Updates:** Transactions disappear after verification
+6. **Clear Status:** Stats sidebar shows pending work at a glance
+
+✅ **Milestone Reached:** Complete verification workflow with searchable edit modal, bulk operations, and forest green design. CFO can review, correct, and verify all auto-classified transactions before they enter the forecast.
+
+---
+
+# 5. Forecast Engine
 
 Purpose: Weekly cash flow aggregation with historical actuals.
 
-## 4.1 Database Schema Updates
+## 5.1 Database Schema Updates
 
 ### category_code Addition
 - Added `category_code` column to `classified_bank_transactions` (indexed)
@@ -210,7 +412,7 @@ CREATE TABLE cash_balances (
 - V1: Single manual entry
 - V2: Automated reconciliation
 
-## 4.2 Classification Engine Updates
+## 5.2 Classification Engine Updates
 
 Updated all classification modules to output `category_code`:
 
@@ -224,7 +426,7 @@ Updated all classification modules to output `category_code`:
 - Default unclassified → `other_other` category code
 - Batch processing updated to include category_code
 
-## 4.3 Forecast Service Implementation
+## 5.3 Forecast Service Implementation
 
 ### lib/forecast/types.ts
 ```typescript
@@ -268,7 +470,7 @@ Core weekly aggregation logic:
 - V1 scope: **Historical/actual weeks only** (up to latest transaction date)
 - Future weeks show $0/blank with placeholder (payment rules deferred to Section 7)
 
-## 4.4 Data Flow
+## 5.4 Data Flow
 
 ```
 raw_transactions
@@ -284,17 +486,17 @@ Complete forecast engine with category_code mapping, weekly aggregation, AR spli
 
 ---
 
-# 5. Forecast Dashboard (Excel-Style Grid)
+# 6. Forecast Dashboard (Excel-Style Grid)
 
 Purpose: Dynamic React implementation matching `forecast-spreadsheet.html` design.
 
-## 5.1 Technology Stack
+## 6.1 Technology Stack
 - **Grid:** AG-Grid Community Edition (`ag-grid-community` + `ag-grid-react`)
 - **Framework:** Next.js 14 with React Server Components
 - **Styling:** Tailwind CSS with custom AG-Grid theme
 - **Route:** `/app/forecast/page.tsx` → `/forecast`
 
-## 5.2 Components Implemented
+## 6.2 Components Implemented
 
 ### `/app/forecast/page.tsx`
 Main forecast page with:
@@ -343,7 +545,7 @@ Module registration to resolve AG-Grid error #272:
 ModuleRegistry.registerModules([AllCommunityModule]);
 ```
 
-## 5.3 Visual Design Match
+## 6.3 Visual Design Match
 
 Exact replication of `forecast-spreadsheet.html`:
 - ✅ Geist-like font family (`-apple-system, BlinkMacSystemFont, 'SF Pro Display'`)
@@ -355,7 +557,7 @@ Exact replication of `forecast-spreadsheet.html`:
 - ✅ Total rows: subtle background, border-top separator
 - ✅ Clean AG-Grid theme (no heavy borders, subtle row hover)
 
-## 5.4 Data Integration
+## 6.4 Data Integration
 
 Grid fetches from `GET /api/forecast/weeks?weeksCount=26` and:
 - Transforms API response into AG-Grid row format
@@ -365,7 +567,7 @@ Grid fetches from `GET /api/forecast/weeks?weeksCount=26` and:
 - Calculates running cash balances per week
 - Distinguishes actual vs forecast values
 
-## 5.5 Grid Features
+## 6.5 Grid Features
 
 - **Pinned left column** for category names (220px width)
 - **Horizontal scroll** for 26+ weeks
@@ -375,7 +577,7 @@ Grid fetches from `GET /api/forecast/weeks?weeksCount=26` and:
 - **Click handling** disabled (only double-click opens modal)
 - **Responsive** (V1: desktop optimized; mobile: future enhancement)
 
-## 5.6 Outstanding V1 Items
+## 6.6 Outstanding V1 Items
 
 - [ ] Mobile responsive layout (collapse to vertical cards)
 - [ ] Export functionality implementation
@@ -439,11 +641,12 @@ Future-dated items appear in weekly buckets alongside historical data.
 
 1. ✅ **Finish ingestion** (complete)
 2. ✅ **Build classification engine** (complete)
-3. ✅ **Build weekly forecast engine** (complete)
-4. ✅ **Render forecast dashboard (Excel-style)** (complete)
-5. **Implement payment rules** ← next
-6. **Add AR estimation module**
-7. **Build scenario-planning engine**
+3. ✅ **Build verification inbox** (complete)
+4. ✅ **Build weekly forecast engine** (complete)
+5. ✅ **Render forecast dashboard (Excel-style)** (complete)
+6. **Implement payment rules** ← next
+7. **Add AR estimation module**
+8. **Build scenario-planning engine**
 
 ---
 
@@ -472,7 +675,18 @@ Future-dated items appear in weekly buckets alongside historical data.
 - Created `scope` field for forecast vs expense card categories
 - Unique `category_code` values for reliable joins
 
-### Forecast Engine (Section 4)
+### Verification Inbox (Section 4)
+- Added verification columns to classified_bank_transactions
+- Created foreign key constraint on category_code
+- Built /app/verification page with forest green design
+- Implemented Verify button with bulk operations
+- Created EditTransactionModal with searchable Headless UI Combobox
+- API endpoints: /api/verification/unverified, /verify, /edit, /categories
+- Real-time search with case-insensitive filtering
+- Defensive null handling at database, API, and UI levels
+- Complete CFO workflow for reviewing and correcting classifications
+
+### Forecast Engine (Section 5)
 - Added `category_code` column to classified_bank_transactions
 - Created `cash_balances` table for manual CFO entries
 - Updated classification engine to output category_code
@@ -481,7 +695,7 @@ Future-dated items appear in weekly buckets alongside historical data.
 - API endpoint: `GET /api/forecast/weeks` with date parameters
 - V1: Historical actuals only (future projections deferred)
 
-### Forecast Dashboard (Section 5)
+### Forecast Dashboard (Section 6)
 - Implemented AG-Grid Community Edition
 - Dynamic 26-week forecast grid at `/forecast`
 - Frozen first column with category hierarchy
