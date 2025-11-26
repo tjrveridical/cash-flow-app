@@ -9,9 +9,11 @@ export async function GET() {
     );
 
     // Fetch all categories from display_categories
+    // Only include categories with valid category_code (not null)
     const { data, error } = await supabase
       .from("display_categories")
       .select("category_code, display_group, display_label, display_label2")
+      .not("category_code", "is", null)
       .order("display_group", { ascending: true })
       .order("display_label", { ascending: true });
 
@@ -19,6 +21,15 @@ export async function GET() {
       console.error("Error fetching categories:", error);
       console.error("Error details:", JSON.stringify(error, null, 2));
       throw error;
+    }
+
+    // Log warning if any categories have null category_code (shouldn't happen with filter above)
+    const invalidCategories = data?.filter((cat) => !cat.category_code);
+    if (invalidCategories && invalidCategories.length > 0) {
+      console.warn(
+        `Found ${invalidCategories.length} categories with null category_code:`,
+        invalidCategories
+      );
     }
 
     return NextResponse.json({

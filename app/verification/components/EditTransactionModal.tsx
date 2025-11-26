@@ -277,9 +277,11 @@ export function EditTransactionModal({ transaction, onClose, onSave }: EditTrans
                         No categories found.
                       </div>
                     ) : (
-                      filteredCategories.map((cat) => (
+                      filteredCategories
+                        .filter((cat) => cat.category_code) // Filter out null/undefined category_codes
+                        .map((cat, index) => (
                         <Combobox.Option
-                          key={cat.category_code}
+                          key={cat.category_code || `fallback-${index}`}
                           value={cat.category_code}
                         >
                           {({ active, selected }) => (
