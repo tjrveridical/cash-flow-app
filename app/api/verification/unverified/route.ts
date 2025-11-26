@@ -21,7 +21,7 @@ export async function GET() {
         confidence_score,
         notes,
         classified_at,
-        transaction:raw_transactions!transaction_id (
+        transaction:raw_transactions (
           date,
           amount,
           name,
@@ -30,7 +30,7 @@ export async function GET() {
           transaction_type,
           qb_account_name
         ),
-        category:display_categories!category_code (
+        category:display_categories (
           display_group,
           display_label,
           display_label2,
