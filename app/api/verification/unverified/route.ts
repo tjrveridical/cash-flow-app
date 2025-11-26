@@ -38,16 +38,23 @@ export async function GET() {
         )
       `
       )
-      .eq("is_verified", false)
-      .order("raw_transactions(date)", { ascending: false });
+      .eq("is_verified", false);
 
     if (error) {
       console.error("Error fetching unverified transactions:", error);
+      console.error("Error details:", JSON.stringify(error, null, 2));
       throw error;
     }
 
+    // Sort by transaction date in JavaScript (since ordering by joined table is complex)
+    const sorted = (unverified || []).sort((a: any, b: any) => {
+      const dateA = new Date(a.transaction?.date || 0).getTime();
+      const dateB = new Date(b.transaction?.date || 0).getTime();
+      return dateB - dateA; // Descending (newest first)
+    });
+
     // Transform data for frontend
-    const transactions = (unverified || []).map((item: any) => {
+    const transactions = sorted.map((item: any) => {
       const tx = item.transaction;
       const cat = item.category;
 
