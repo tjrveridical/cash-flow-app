@@ -122,11 +122,69 @@ export default function PaydateRulesPage() {
   // Open modal for edit
   const openEditModal = (rule: PaydateRule) => {
     setEditingRule(rule);
-    // Pre-fill form data based on rule
-    // This would need more logic to reverse-engineer the form fields
     setGeneratedRuleName(rule.rule_name);
     setDuplicateError(false);
+
+    // Reverse monthMap for lookup
+    const reverseMonthMap: Record<string, string> = {};
+    Object.entries(monthMap).forEach(([key, value]) => {
+      reverseMonthMap[value] = key;
+    });
+
+    // Build form data by reverse-engineering the stored values
+    const newFormData: RuleFormData = {
+      frequency: rule.frequency,
+      anchor_day: rule.anchor_day,
+      anchor_day2: rule.anchor_day2,
+      months: rule.months,
+      business_day_adjustment: rule.business_day_adjustment,
+    };
+
+    // Populate frequency-specific fields
+    if (rule.frequency === "Weekly") {
+      newFormData.dayOfWeek = rule.anchor_day; // Mon, Tue, etc.
+    } else if (rule.frequency === "Monthly") {
+      if (rule.anchor_day === "EOM") {
+        newFormData.isEOM = true;
+        newFormData.dayOfMonth = "";
+      } else {
+        newFormData.isEOM = false;
+        newFormData.dayOfMonth = rule.anchor_day;
+      }
+    } else if (rule.frequency === "SemiMonthly") {
+      newFormData.semiAnchor1 = rule.anchor_day;
+      newFormData.semiAnchor2 = rule.anchor_day2?.toString() || "";
+    } else if (rule.frequency === "Quarterly") {
+      newFormData.quarterlyDay = rule.anchor_day;
+      // Extract first month from months string (e.g., "1,4,7,10" -> "1" -> "Jan")
+      if (rule.months) {
+        const firstMonth = rule.months.split(",")[0];
+        newFormData.quarterlyMonth = reverseMonthMap[firstMonth] || "";
+      }
+    } else if (rule.frequency === "SemiAnnual") {
+      newFormData.semiAnnualDay1 = rule.anchor_day;
+      newFormData.semiAnnualDay2 = rule.anchor_day2?.toString() || "";
+      // Extract two months from months string (e.g., "4,10" -> ["4", "10"] -> ["Apr", "Oct"])
+      if (rule.months) {
+        const [month1, month2] = rule.months.split(",");
+        newFormData.semiAnnualMonth1 = reverseMonthMap[month1] || "";
+        newFormData.semiAnnualMonth2 = reverseMonthMap[month2] || "";
+      }
+    } else if (rule.frequency === "Annually") {
+      newFormData.annualDay = rule.anchor_day;
+      // Extract month from months string (e.g., "6" -> "Jun")
+      if (rule.months) {
+        newFormData.annualMonth = reverseMonthMap[rule.months] || "";
+      }
+    }
+
+    setFormData(newFormData);
     setModalOpen(true);
+
+    // Trigger form field updates after state has been set
+    setTimeout(() => {
+      updateFormFields(rule.frequency);
+    }, 0);
   };
 
   // Close modal
