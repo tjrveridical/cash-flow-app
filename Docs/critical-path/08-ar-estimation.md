@@ -1,6 +1,31 @@
 # 8. AR Estimation Module (Step 1: Solo MVP)
 
-## Purpose & Scope
+**⚠️ V1 SIMPLIFIED IMPLEMENTATION**
+
+This module describes the original complex design with invoice-level tracking. The actual V1 implementation uses a simplified week-level approach:
+
+**V1 (Implemented):**
+- Spreadsheet-style horizontal scrolling grid
+- Week-level totals only (no invoice detail)
+- Simple inline editing (click cell → type amount → save)
+- Table: `ar_forecast` (week_ending, forecasted_amount, notes)
+
+**V2 (Original Design - Deferred):**
+- Invoice-level detail tracking
+- Customer names and invoice numbers
+- Confidence level weighting
+- Modal forms for entry
+- Table: `ar_forecast_entries` (complex version)
+
+See implementation files:
+- Database: `supabase/migrations/20251127134853_create_ar_forecast.sql`
+- API: `app/api/ar-forecast/route.ts`
+- UI: `app/ar-forecast/page.tsx`
+- Integration: `lib/forecast/forecast-service.ts`
+
+---
+
+## Purpose & Scope (Original V2 Design)
 
 The AR Estimation Module provides manual 4-week rolling AR forecast capabilities, allowing CFOs to input expected customer payments with confidence levels. These forecasts populate "AR Collections" inflows in future forecast weeks with conservative confidence-weighted amounts.
 
@@ -316,15 +341,24 @@ function getWeekEnding(date: Date): string {
 
 ## Completion Criteria
 
-✅ ar_forecast_entries table created
-❌ API endpoints implemented (GET, POST, PUT, DELETE)
-❌ AR forecast UI page with 4-week table
+**V1 Simplified Implementation:**
+✅ ar_forecast table created (week_ending, forecasted_amount, notes)
+✅ API endpoints implemented (GET, POST upsert, DELETE)
+✅ AR forecast UI page with horizontal scrolling week grid
+✅ Inline editing (click cell → type amount → Enter to save)
+✅ Weekly aggregation logic (built-in via table structure)
+✅ Forecast integration with forecast API (lib/forecast/forecast-service.ts)
+✅ Visual distinction in forecast grid (actual bold, forecast italic blue)
+✅ Forest green design matching other pages
+✅ Summary stats (Total Actual, Total Forecast, Weeks Forecasted)
+✅ Auto-scroll to current week on page load
+
+**V2 Complex Implementation (Deferred):**
+❌ ar_forecast_entries table with invoice-level detail
+❌ Customer names and invoice numbers
 ❌ Modal form with confidence level selector
-❌ Confidence multiplier calculation
-❌ Weekly aggregation logic
-❌ Forecast integration (merge with actual AR Collections)
-❌ Visual distinction in forecast grid
-❌ Forest green design matching other pages
+❌ Confidence multiplier calculation (90%, 70%, 40%)
+❌ Invoice-level tracking and aggregation
 
 ## Related Modules
 
