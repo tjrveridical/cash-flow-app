@@ -2,6 +2,13 @@
 -- NO vendors, NO amounts, NO categories - PURE date templates only
 -- These are reusable templates that forecast_items will reference
 
+-- Drop old payment_rules table if it exists (from previous schema)
+DROP TABLE IF EXISTS public.payment_rules CASCADE;
+
+-- Drop old enums if they exist
+DROP TYPE IF EXISTS payment_frequency CASCADE;
+DROP TYPE IF EXISTS exception_rule CASCADE;
+
 CREATE TABLE payment_rules (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   rule_name TEXT UNIQUE NOT NULL,
