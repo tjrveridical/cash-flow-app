@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { DetailModal } from "./DetailModal";
 
 interface WeeklyForecast {
@@ -25,9 +25,16 @@ interface CategoryForecast {
   sortOrder: number;
 }
 
+interface EditingCell {
+  weekEnding: string;
+  categoryCode: string;
+  value: string;
+}
+
 export function ForecastGrid() {
   const [weeks, setWeeks] = useState<WeeklyForecast[]>([]);
   const [loading, setLoading] = useState(true);
+  const [editingCell, setEditingCell] = useState<EditingCell | null>(null);
   const [modalState, setModalState] = useState({
     isOpen: false,
     title: "",
@@ -36,14 +43,57 @@ export function ForecastGrid() {
     amount: 0,
   });
 
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const hasScrolledRef = useRef(false);
+
+  // Calculate date range: Jan 1 to +14 weeks
+  const calculateDateRange = () => {
+    const now = new Date();
+    const currentYear = now.getFullYear();
+    const startDate = new Date(currentYear, 0, 1); // Jan 1
+    const endDate = new Date(now);
+    endDate.setDate(endDate.getDate() + 14 * 7); // +14 weeks
+
+    return {
+      startDate: startDate.toISOString().split("T")[0],
+      endDate: endDate.toISOString().split("T")[0],
+    };
+  };
+
+  const fetchForecastData = async () => {
+    const { startDate, endDate } = calculateDateRange();
+    const response = await fetch(`/api/forecast/weeks?startDate=${startDate}&endDate=${endDate}`);
+    const data = await response.json();
+    if (data.success) {
+      setWeeks(data.weeks);
+    }
+  };
+
   useEffect(() => {
-    fetch("/api/forecast/weeks?weeksCount=26")
-      .then((r) => r.json())
-      .then((data) => {
-        if (data.success) setWeeks(data.weeks);
-      })
-      .finally(() => setLoading(false));
+    fetchForecastData().finally(() => setLoading(false));
   }, []);
+
+  // Auto-scroll to current week on mount
+  useEffect(() => {
+    if (weeks.length === 0 || hasScrolledRef.current) return;
+
+    const today = new Date();
+    const currentWeekIndex = weeks.findIndex((w) => new Date(w.weekEnding) >= today);
+
+    if (currentWeekIndex >= 0 && scrollContainerRef.current) {
+      // Scroll to show current week with 2-3 weeks of context before it
+      const targetIndex = Math.max(0, currentWeekIndex - 2);
+      const weekHeaders = scrollContainerRef.current.querySelectorAll(".week-header th");
+      const targetHeader = weekHeaders[targetIndex + 1]; // +1 for category column
+
+      if (targetHeader) {
+        setTimeout(() => {
+          targetHeader.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "start" });
+        }, 100);
+        hasScrolledRef.current = true;
+      }
+    }
+  }, [weeks]);
 
   const formatCurrency = (value: number) => {
     const abs = Math.abs(value);
@@ -96,6 +146,62 @@ export function ForecastGrid() {
     });
   };
 
+  // Check if AR cell is editable (ar_collections AND future week)
+  const isAREditable = (categoryCode: string, weekEnding: string): boolean => {
+    if (categoryCode !== "ar_collections") return false;
+    const weekDate = new Date(weekEnding);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    return weekDate > today;
+  };
+
+  const handleStartEdit = (weekEnding: string, categoryCode: string, currentAmount: number) => {
+    if (!isAREditable(categoryCode, weekEnding)) return;
+
+    setEditingCell({
+      weekEnding,
+      categoryCode,
+      value: currentAmount > 0 ? Math.abs(currentAmount).toString() : "",
+    });
+  };
+
+  const handleSaveEdit = async () => {
+    if (!editingCell) return;
+
+    const amount = parseFloat(editingCell.value.replace(/[^0-9.-]/g, ""));
+    if (!isNaN(amount) && amount >= 0) {
+      try {
+        await fetch("/api/ar-forecast", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            week_ending: editingCell.weekEnding,
+            forecasted_amount: amount,
+          }),
+        });
+
+        // Refresh forecast data
+        await fetchForecastData();
+      } catch (error) {
+        console.error("Error saving AR forecast:", error);
+      }
+    }
+
+    setEditingCell(null);
+  };
+
+  const handleCancelEdit = () => {
+    setEditingCell(null);
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter") {
+      handleSaveEdit();
+    } else if (e.key === "Escape") {
+      handleCancelEdit();
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center" style={{ height: "calc(100vh - 200px)" }}>
@@ -116,9 +222,52 @@ export function ForecastGrid() {
   const today = new Date();
   const currentWeekIndex = weeks.findIndex((w) => new Date(w.weekEnding) >= today);
 
+  // Render AR cell with editing support
+  const renderARCell = (w: WeeklyForecast, cat: CategoryForecast) => {
+    const amount = getCategoryAmount(w, cat.categoryCode);
+    const isActual = isCategoryActual(w, cat.categoryCode);
+    const isEditable = isAREditable(cat.categoryCode, w.weekEnding);
+    const isEditing = editingCell?.weekEnding === w.weekEnding && editingCell?.categoryCode === cat.categoryCode;
+
+    if (isEditing) {
+      return (
+        <td key={w.weekEnding} className="amount-cell editing-cell">
+          <input
+            type="text"
+            value={editingCell.value}
+            onChange={(e) => setEditingCell({ ...editingCell, value: e.target.value })}
+            onBlur={handleSaveEdit}
+            onKeyDown={handleKeyDown}
+            autoFocus
+            className="editing-input"
+            placeholder="0"
+          />
+        </td>
+      );
+    }
+
+    return (
+      <td
+        key={w.weekEnding}
+        className={`amount-cell ${amount >= 0 ? "amount-positive" : "amount-negative"} ${
+          isActual ? "amount-actual" : "amount-forecast"
+        } ${isEditable ? "editable-cell" : ""} ${amount !== 0 && !isEditable ? "clickable-amount" : ""}`}
+        onClick={() => {
+          if (isEditable) {
+            handleStartEdit(w.weekEnding, cat.categoryCode, amount);
+          } else if (amount !== 0) {
+            handleAmountClick(cat.displayLabel, w.weekEnding, amount);
+          }
+        }}
+      >
+        {amount !== 0 ? formatCurrency(amount) : "$0"}
+      </td>
+    );
+  };
+
   return (
     <>
-      <div className="forecast-table-wrapper">
+      <div className="forecast-table-wrapper" ref={scrollContainerRef}>
         <table className="forecast-table">
           <thead>
             <tr className="week-header">
@@ -162,22 +311,27 @@ export function ForecastGrid() {
               <tr key={cat.categoryCode} className="data-row">
                 <td className="category-cell" title={cat.displayLabel}>
                   {cat.displayLabel}
+                  {cat.categoryCode === "ar_collections" && (
+                    <span className="text-xs text-blue-600 ml-2">(editable)</span>
+                  )}
                 </td>
-                {weeks.map((w) => {
-                  const amount = getCategoryAmount(w, cat.categoryCode);
-                  const isActual = isCategoryActual(w, cat.categoryCode);
-                  return (
-                    <td
-                      key={w.weekEnding}
-                      className={`amount-cell ${amount >= 0 ? "amount-positive" : "amount-negative"} ${
-                        isActual ? "amount-actual" : "amount-forecast"
-                      } ${amount !== 0 ? "clickable-amount" : ""}`}
-                      onClick={() => amount !== 0 && handleAmountClick(cat.displayLabel, w.weekEnding, amount)}
-                    >
-                      {amount !== 0 ? formatCurrency(amount) : "$0"}
-                    </td>
-                  );
-                })}
+                {cat.categoryCode === "ar_collections"
+                  ? weeks.map((w) => renderARCell(w, cat))
+                  : weeks.map((w) => {
+                      const amount = getCategoryAmount(w, cat.categoryCode);
+                      const isActual = isCategoryActual(w, cat.categoryCode);
+                      return (
+                        <td
+                          key={w.weekEnding}
+                          className={`amount-cell ${amount >= 0 ? "amount-positive" : "amount-negative"} ${
+                            isActual ? "amount-actual" : "amount-forecast"
+                          } ${amount !== 0 ? "clickable-amount" : ""}`}
+                          onClick={() => amount !== 0 && handleAmountClick(cat.displayLabel, w.weekEnding, amount)}
+                        >
+                          {amount !== 0 ? formatCurrency(amount) : "$0"}
+                        </td>
+                      );
+                    })}
               </tr>
             ))}
             <tr className="data-row total-row">
@@ -391,6 +545,7 @@ export function ForecastGrid() {
           overflow-x: auto;
           max-height: calc(100vh - 200px);
           overflow-y: auto;
+          scroll-behavior: smooth;
         }
 
         .forecast-table {
@@ -615,6 +770,42 @@ export function ForecastGrid() {
           text-decoration-color: #3b82f6;
           background: linear-gradient(135deg, rgba(240, 249, 255, 0.8) 0%, rgba(240, 249, 255, 0.4) 100%);
           border-radius: 4px;
+        }
+
+        /* Editable AR cells */
+        .editable-cell {
+          cursor: pointer;
+          position: relative;
+        }
+
+        .editable-cell:hover {
+          background: linear-gradient(135deg, rgba(240, 249, 255, 0.6) 0%, rgba(240, 249, 255, 0.3) 100%) !important;
+          outline: 1px solid rgba(59, 130, 246, 0.3);
+          border-radius: 4px;
+        }
+
+        .editing-cell {
+          padding: 0 !important;
+          background: white !important;
+        }
+
+        .editing-input {
+          width: 100%;
+          height: 100%;
+          min-height: 36px;
+          border: 2px solid #3b82f6;
+          background: white;
+          text-align: right;
+          font: inherit;
+          padding: 4px 8px;
+          border-radius: 4px;
+          color: #059669;
+          font-weight: 600;
+        }
+
+        .editing-input:focus {
+          outline: none;
+          box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
         }
 
         /* Scrollbar styling */
