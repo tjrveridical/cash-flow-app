@@ -54,24 +54,33 @@ Post-V1 features based on user feedback:
 
 ## Current Status
 
-**Active Module:** [07-payment-rules.md](critical-path/07-payment-rules.md)
+**Active Module:** [07-payment-rules.md](critical-path/07-payment-rules.md) *(CRUD complete, forecast integration pending)*
 **Last Updated:** November 27, 2024
-**Completion:** 60% (6/10 core modules done)
+**Completion:** 65% (6.5/10 core modules done)
 
-### Recent Work
+### Recent Work (Session: November 27, 2024)
 
+**Payment Rules (Module 7) - CRUD Complete:**
 - ✅ Fixed Next.js 15+ params await issue in paydate-rules API routes
 - ✅ Implemented edit modal pre-population with reverse-engineering logic
 - ✅ Fixed conditional form fields visibility
 - ✅ Created paydate-rules migration with 25 bootstrap rules
-- ✅ Built complete CRUD API for payment rules management
+- ✅ Built complete CRUD API for payment rules management (GET, POST, PUT, DELETE, dependencies)
+- ✅ UI page with table, stats sidebar, and dynamic modal form
+- ✅ Auto-generated rule names with frequency-specific validation
+
+**Status:** Payment rules CRUD complete. Forecast integration (date generation engine) deferred until forecast_items implementation.
 
 ### Next Steps
 
-1. Finish payment date generation engine for forecast integration
-2. Implement AR Estimation module (Section 8)
-3. Polish Solo MVP (import redesign, toasts, loading spinners)
-4. Begin multi-user foundation (Supabase auth setup)
+1. **Module 8: AR Estimation** - Manual 4-week AR forecast with confidence weights
+2. **Solo MVP Polish** (Section 8.6-8.9):
+   - CSV import redesign with forest green theme
+   - Error toasts & loading spinners
+   - "Set Beginning Cash" modal
+   - Database cleanup audit
+3. **Module 7 Continuation** - Payment date generation engine for forecast integration
+4. **Module 9: Multi-User Foundation** - Supabase auth setup
 
 ---
 
@@ -85,7 +94,7 @@ Post-V1 features based on user feedback:
 | 4 | [Verification Inbox](critical-path/04-verification-inbox.md) | ✅ | CFO review workflow, searchable category edit |
 | 5 | [Forecast Engine](critical-path/05-forecast-engine.md) | ✅ | Weekly aggregation, AR split logic, cash balances |
 | 6 | [Forecast Dashboard](critical-path/06-forecast-dashboard.md) | ✅ | AG-Grid with 26-week scroll, drill-downs, totals |
-| 7 | [Payment Rules](critical-path/07-payment-rules.md) | 🟡 | Paydate rules (pure date templates) **IN PROGRESS** |
+| 7 | [Payment Rules](critical-path/07-payment-rules.md) | 🟡 | Paydate rules CRUD ✅ / Forecast integration ⬜ |
 | 8 | [AR Estimation](critical-path/08-ar-estimation.md) | ⬜ | Manual 4-week AR forecast, confidence weights |
 | 9 | [Multi-User Foundation](critical-path/09-multi-user.md) | ⬜ | Auth, RBAC, import safety, production deploy |
 | 10 | [Leadership Access](critical-path/10-leadership-access.md) | ⬜ | View-only RBAC, leadership invites, scale |
