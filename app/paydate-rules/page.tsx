@@ -180,11 +180,6 @@ export default function PaydateRulesPage() {
 
     setFormData(newFormData);
     setModalOpen(true);
-
-    // Trigger form field updates after state has been set
-    setTimeout(() => {
-      updateFormFields(rule.frequency);
-    }, 0);
   };
 
   // Close modal
