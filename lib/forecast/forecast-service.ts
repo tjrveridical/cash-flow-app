@@ -166,6 +166,41 @@ export class ForecastService {
         cat.transactionCount += 1;
       }
 
+      // Fetch AR forecasts for future weeks
+      const { data: arForecasts } = await this.supabase
+        .from("ar_forecast")
+        .select("*")
+        .gte("week_ending", formatDate(latestWeekEnding));
+
+      // Add AR forecasts to future weeks
+      if (arForecasts && arForecasts.length > 0) {
+        for (const forecast of arForecasts) {
+          const weekEnding = forecast.week_ending;
+
+          // Skip if we already have actuals for this week
+          if (weekMap.has(weekEnding)) continue;
+
+          // Create a new week with just the AR forecast
+          const categoryBucket = new Map<string, CategoryForecast>();
+
+          if (forecast.forecasted_amount > 0) {
+            categoryBucket.set("ar_collections", {
+              displayGroup: "AR",
+              displayLabel: "AR Collections",
+              displayLabel2: null,
+              categoryCode: "ar_collections",
+              cashDirection: "Cashin",
+              amount: forecast.forecasted_amount,
+              transactionCount: 0,
+              isActual: false, // This is a forecast
+              sortOrder: 1, // AR Collections should be first
+            });
+          }
+
+          weekMap.set(weekEnding, categoryBucket);
+        }
+      }
+
       // Convert to WeeklyForecast array
       const weeks: WeeklyForecast[] = [];
       const beginningCash = await getBeginningCash(this.supabase);
