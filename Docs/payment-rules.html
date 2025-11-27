@@ -1,0 +1,1196 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Payment Rules - Cash Flow Forecast</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', Inter, system-ui, sans-serif;
+            background: linear-gradient(135deg, #f8faf9 0%, #f5f7f6 100%);
+            color: #1e293b;
+            min-height: 100vh;
+            letter-spacing: -0.014em;
+        }
+
+        /* Header */
+        .header {
+            background: linear-gradient(135deg, #1e3a1e 0%, #2d5a2d 40%, #3d6b3d 100%);
+            padding: 24px 32px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 4px 24px rgba(30, 58, 30, 0.08);
+        }
+
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .header-title {
+            font-size: 24px;
+            font-weight: 650;
+            color: white;
+            letter-spacing: -0.02em;
+        }
+
+        .header-actions {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .btn-secondary {
+            padding: 10px 18px;
+            background: rgba(255, 255, 255, 0.15);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: white;
+            border-radius: 8px;
+            font-size: 13px;
+            font-weight: 550;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            white-space: nowrap;
+        }
+
+        .btn-secondary:hover {
+            background: rgba(255, 255, 255, 0.25);
+            transform: translateY(-1px);
+        }
+
+        .btn-primary {
+            padding: 10px 20px;
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.95) 0%, rgba(255, 255, 255, 0.85) 100%);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            color: #1e3a1e;
+            border-radius: 8px;
+            font-size: 13px;
+            font-weight: 650;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            box-shadow: 0 1px 0 rgba(255, 255, 255, 0.2) inset;
+            white-space: nowrap;
+        }
+
+        .btn-primary:hover {
+            background: white;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(255, 255, 255, 0.3);
+        }
+
+        .role-badge {
+            padding: 6px 14px;
+            background: rgba(255, 255, 255, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            color: white;
+            border-radius: 20px;
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+        }
+
+        /* Main Container */
+        .container {
+            max-width: 1600px;
+            margin: 0 auto;
+            padding: 32px;
+        }
+
+        .main-grid {
+            display: grid;
+            grid-template-columns: 1fr 280px;
+            gap: 24px;
+            align-items: start;
+        }
+
+        /* Empty State */
+        .empty-state {
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.95) 0%, rgba(255, 255, 255, 0.9) 100%);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(30, 58, 30, 0.08);
+            border-radius: 16px;
+            padding: 80px 40px;
+            text-align: center;
+            box-shadow: 0 4px 24px rgba(30, 58, 30, 0.04);
+        }
+
+        body:not(.populated) .empty-state {
+            display: block;
+        }
+
+        body.populated .empty-state {
+            display: none;
+        }
+
+        body:not(.populated) .rules-table-container {
+            display: none;
+        }
+
+        body.populated .rules-table-container {
+            display: block;
+        }
+
+        .empty-icon {
+            width: 80px;
+            height: 80px;
+            margin: 0 auto 24px;
+            background: linear-gradient(135deg, #2d5a2d 0%, #3d6b3d 100%);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 40px;
+            color: white;
+        }
+
+        .empty-title {
+            font-size: 20px;
+            font-weight: 650;
+            color: #1e3a1e;
+            margin-bottom: 12px;
+            letter-spacing: -0.02em;
+        }
+
+        .empty-subtitle {
+            font-size: 14px;
+            color: #64748b;
+            margin-bottom: 32px;
+            max-width: 400px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        .btn-create-large {
+            padding: 14px 32px;
+            background: linear-gradient(135deg, #2d5a2d 0%, #3d6b3d 100%);
+            border: none;
+            color: white;
+            border-radius: 10px;
+            font-size: 15px;
+            font-weight: 650;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            box-shadow: 0 4px 12px rgba(45, 90, 45, 0.15);
+        }
+
+        .btn-create-large:hover {
+            background: linear-gradient(135deg, #1e3a1e 0%, #2d5a2d 100%);
+            transform: translateY(-2px);
+            box-shadow: 0 8px 24px rgba(45, 90, 45, 0.25);
+        }
+
+        /* Rules Table */
+        .rules-table-container {
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.95) 0%, rgba(255, 255, 255, 0.9) 100%);
+            backdrop-filter: blur(24px);
+            border: 1px solid rgba(30, 58, 30, 0.08);
+            border-radius: 16px;
+            box-shadow: 0 4px 24px rgba(30, 58, 30, 0.04);
+            overflow: hidden;
+        }
+
+        .table-wrapper {
+            overflow-x: auto;
+            overflow-y: auto;
+            max-height: calc(100vh - 240px);
+        }
+
+        .rules-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 12px;
+        }
+
+        .rules-table thead {
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+
+        .rules-table th {
+            padding: 12px;
+            background: linear-gradient(135deg, #1e3a1e 0%, #2d5a2d 100%);
+            color: white;
+            text-align: left;
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.02em;
+            border-bottom: 2px solid rgba(255, 255, 255, 0.1);
+            white-space: nowrap;
+            cursor: pointer;
+            user-select: none;
+        }
+
+        .rules-table th:hover {
+            background: linear-gradient(135deg, #2d5a2d 0%, #3d6b3d 100%);
+        }
+
+        .rules-table th.sortable::after {
+            content: ' ⇅';
+            opacity: 0.5;
+            font-size: 10px;
+        }
+
+        /* CRITICAL: Fixed row height and overflow handling */
+        .rules-table td {
+            padding: 8px 12px;
+            height: 36px;
+            vertical-align: middle;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            border-bottom: 1px solid rgba(30, 58, 30, 0.04);
+            font-size: 12px;
+        }
+
+        .rules-table tbody tr {
+            transition: background 0.15s ease;
+        }
+
+        .rules-table tbody tr:hover {
+            background: linear-gradient(135deg, rgba(240, 248, 242, 0.5) 0%, rgba(240, 248, 242, 0.3) 100%);
+        }
+
+        .rules-table tbody tr.inactive {
+            opacity: 0.5;
+        }
+
+        /* Column-specific widths */
+        .col-vendor {
+            max-width: 180px;
+            font-weight: 580;
+            color: #1e293b;
+        }
+
+        .col-category {
+            width: 80px;
+        }
+
+        .col-frequency {
+            width: 110px;
+            color: #475569;
+        }
+
+        .col-anchor {
+            width: 90px;
+            color: #64748b;
+            font-size: 11px;
+        }
+
+        .col-amount {
+            width: 110px;
+            text-align: right;
+            font-weight: 600;
+            font-feature-settings: "tnum" 1;
+            color: #dc2626;
+        }
+
+        .col-busday {
+            width: 80px;
+            text-align: center;
+        }
+
+        .col-active {
+            width: 60px;
+            text-align: center;
+        }
+
+        .col-actions {
+            width: 100px;
+            text-align: right;
+        }
+
+        /* Tooltip for truncated text */
+        .tooltip {
+            position: relative;
+        }
+
+        .tooltip::after {
+            content: attr(data-tooltip);
+            position: absolute;
+            bottom: 100%;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(15, 23, 42, 0.95);
+            color: white;
+            padding: 8px 12px;
+            border-radius: 6px;
+            font-size: 11px;
+            white-space: nowrap;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.2s ease;
+            z-index: 1000;
+            margin-bottom: 8px;
+        }
+
+        .tooltip:hover::after {
+            opacity: 1;
+        }
+
+        /* Badges */
+        .badge {
+            display: inline-block;
+            padding: 3px 8px;
+            border-radius: 4px;
+            font-size: 10px;
+            font-weight: 600;
+            letter-spacing: 0.02em;
+            white-space: nowrap;
+        }
+
+        .badge-labor {
+            background: rgba(168, 85, 247, 0.1);
+            color: #7e22ce;
+        }
+
+        .badge-cogs {
+            background: rgba(249, 115, 22, 0.1);
+            color: #c2410c;
+        }
+
+        .badge-opex {
+            background: rgba(59, 130, 246, 0.1);
+            color: #1d4ed8;
+        }
+
+        .badge-other {
+            background: rgba(107, 114, 128, 0.1);
+            color: #374151;
+        }
+
+        .badge-busday {
+            background: rgba(45, 90, 45, 0.1);
+            color: #2d5a2d;
+            font-size: 9px;
+            padding: 2px 6px;
+        }
+
+        /* Toggle Switch */
+        .toggle {
+            position: relative;
+            width: 36px;
+            height: 20px;
+            display: inline-block;
+        }
+
+        .toggle input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .toggle-slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: #cbd5e1;
+            transition: 0.3s;
+            border-radius: 20px;
+        }
+
+        .toggle-slider:before {
+            position: absolute;
+            content: "";
+            height: 14px;
+            width: 14px;
+            left: 3px;
+            bottom: 3px;
+            background: white;
+            transition: 0.3s;
+            border-radius: 50%;
+        }
+
+        .toggle input:checked + .toggle-slider {
+            background: linear-gradient(135deg, #2d5a2d 0%, #3d6b3d 100%);
+        }
+
+        .toggle input:checked + .toggle-slider:before {
+            transform: translateX(16px);
+        }
+
+        /* Action Buttons */
+        .action-btn {
+            padding: 4px 10px;
+            border: none;
+            border-radius: 5px;
+            font-size: 11px;
+            font-weight: 550;
+            cursor: pointer;
+            transition: all 0.15s ease;
+            margin-left: 4px;
+        }
+
+        .btn-edit {
+            background: rgba(249, 115, 22, 0.1);
+            color: #c2410c;
+        }
+
+        .btn-edit:hover {
+            background: rgba(249, 115, 22, 0.2);
+        }
+
+        .btn-delete {
+            background: rgba(220, 38, 38, 0.1);
+            color: #dc2626;
+        }
+
+        .btn-delete:hover {
+            background: rgba(220, 38, 38, 0.2);
+        }
+
+        /* Stats Sidebar */
+        .stats-sidebar {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .stat-card {
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.95) 0%, rgba(255, 255, 255, 0.9) 100%);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(30, 58, 30, 0.08);
+            border-radius: 12px;
+            padding: 16px;
+            position: relative;
+            overflow: hidden;
+            transition: all 0.2s ease;
+            box-shadow: 0 2px 8px rgba(30, 58, 30, 0.03);
+        }
+
+        .stat-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: linear-gradient(90deg, #2d5a2d 0%, #4a7c4a 50%, #5e8e5e 100%);
+        }
+
+        .stat-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 16px rgba(30, 58, 30, 0.08);
+        }
+
+        .stat-label {
+            font-size: 10px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.02em;
+            color: #64748b;
+            margin-bottom: 4px;
+        }
+
+        .stat-value {
+            font-size: 20px;
+            font-weight: 700;
+            color: #1e3a1e;
+            white-space: nowrap;
+        }
+
+        .stat-subtext {
+            font-size: 10px;
+            color: #94a3b8;
+            margin-top: 2px;
+        }
+
+        /* Modal */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(15, 23, 42, 0.7);
+            backdrop-filter: blur(12px);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .modal-overlay.active {
+            display: flex;
+        }
+
+        .modal {
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.95) 0%, rgba(255, 255, 255, 0.9) 100%);
+            backdrop-filter: blur(24px);
+            border: 1px solid rgba(30, 58, 30, 0.08);
+            border-radius: 16px;
+            max-width: 700px;
+            width: 100%;
+            max-height: 90vh;
+            overflow-y: auto;
+            box-shadow: 0 20px 60px rgba(30, 58, 30, 0.15);
+        }
+
+        .modal-header {
+            padding: 24px 32px;
+            border-bottom: 1px solid rgba(30, 58, 30, 0.08);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .modal-title {
+            font-size: 20px;
+            font-weight: 650;
+            color: #1e3a1e;
+            letter-spacing: -0.02em;
+        }
+
+        .modal-close {
+            background: none;
+            border: none;
+            font-size: 28px;
+            color: #94a3b8;
+            cursor: pointer;
+            line-height: 1;
+            padding: 0;
+            width: 32px;
+            height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: color 0.2s ease;
+        }
+
+        .modal-close:hover {
+            color: #dc2626;
+        }
+
+        .modal-body {
+            padding: 32px;
+        }
+
+        .form-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .form-group.full-width {
+            grid-column: 1 / -1;
+        }
+
+        .form-label {
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.02em;
+            color: #475569;
+        }
+
+        .form-input,
+        .form-select {
+            padding: 10px 14px;
+            height: 40px;
+            border: 1px solid rgba(30, 58, 30, 0.15);
+            border-radius: 8px;
+            font-size: 13px;
+            font-weight: 500;
+            color: #1e293b;
+            background: rgba(255, 255, 255, 0.9);
+            transition: all 0.2s ease;
+            font-family: inherit;
+        }
+
+        .form-input:focus,
+        .form-select:focus {
+            outline: none;
+            border-color: #2d5a2d;
+            box-shadow: 0 0 0 3px rgba(45, 90, 45, 0.1);
+        }
+
+        .form-input::placeholder {
+            color: #94a3b8;
+        }
+
+        .anchor-field {
+            display: none;
+        }
+
+        .anchor-field.active {
+            display: block;
+        }
+
+        .anchor-inline {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+        }
+
+        .anchor-inline input {
+            flex: 1;
+        }
+
+        .form-checkbox-group {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-top: 8px;
+        }
+
+        .form-checkbox {
+            width: 18px;
+            height: 18px;
+            cursor: pointer;
+        }
+
+        .form-toggle-group {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-top: 8px;
+        }
+
+        .modal-footer {
+            padding: 20px 32px;
+            border-top: 1px solid rgba(30, 58, 30, 0.08);
+            display: flex;
+            justify-content: space-between;
+            gap: 12px;
+        }
+
+        .btn-modal-cancel {
+            padding: 10px 24px;
+            background: rgba(255, 255, 255, 0.8);
+            border: 1px solid rgba(30, 58, 30, 0.1);
+            color: #475569;
+            border-radius: 8px;
+            font-size: 13px;
+            font-weight: 550;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .btn-modal-cancel:hover {
+            background: rgba(255, 255, 255, 0.95);
+            border-color: rgba(30, 58, 30, 0.15);
+        }
+
+        .btn-modal-save {
+            padding: 10px 24px;
+            background: linear-gradient(135deg, #2d5a2d 0%, #3d6b3d 100%);
+            border: none;
+            color: white;
+            border-radius: 8px;
+            font-size: 13px;
+            font-weight: 650;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            box-shadow: 0 1px 0 rgba(255, 255, 255, 0.1) inset;
+        }
+
+        .btn-modal-save:hover {
+            background: linear-gradient(135deg, #1e3a1e 0%, #2d5a2d 100%);
+            transform: translateY(-1px);
+            box-shadow: 0 6px 20px rgba(45, 90, 45, 0.2);
+        }
+
+        .disabled-text {
+            color: #94a3b8;
+            font-style: italic;
+            padding: 10px 14px;
+            background: rgba(0, 0, 0, 0.02);
+            border-radius: 8px;
+            font-size: 13px;
+        }
+
+        /* Toast Notification */
+        .toast {
+            position: fixed;
+            bottom: 32px;
+            right: 32px;
+            padding: 16px 24px;
+            background: linear-gradient(135deg, #2d5a2d 0%, #3d6b3d 100%);
+            color: white;
+            border-radius: 10px;
+            font-size: 14px;
+            font-weight: 550;
+            box-shadow: 0 8px 24px rgba(45, 90, 45, 0.3);
+            display: none;
+            z-index: 2000;
+            animation: slideIn 0.3s ease;
+        }
+
+        .toast.active {
+            display: block;
+        }
+
+        @keyframes slideIn {
+            from {
+                transform: translateX(400px);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+    </style>
+</head>
+<body class="populated">
+    <!-- Header -->
+    <div class="header">
+        <div class="header-left">
+            <div class="header-title">Payment Rules</div>
+        </div>
+        <div class="header-actions">
+            <button class="btn-secondary">Import Holidays</button>
+            <button class="btn-secondary">Export Rules</button>
+            <button class="btn-primary" onclick="openModal()">Create Rule</button>
+            <div class="role-badge">CFO</div>
+        </div>
+    </div>
+
+    <!-- Main Container -->
+    <div class="container">
+        <div class="main-grid">
+            <!-- Left: Empty State or Rules Table -->
+            <div>
+                <!-- Empty State -->
+                <div class="empty-state">
+                    <div class="empty-icon">📋</div>
+                    <div class="empty-title">No payment rules yet</div>
+                    <div class="empty-subtitle">Create your first recurring payment to define vendor payment schedules and generate your 14-week cash forecast</div>
+                    <button class="btn-create-large" onclick="openModal()">Create Rule</button>
+                </div>
+
+                <!-- Rules Table -->
+                <div class="rules-table-container">
+                    <div class="table-wrapper">
+                        <table class="rules-table">
+                            <thead>
+                                <tr>
+                                    <th class="sortable col-vendor">Vendor</th>
+                                    <th class="sortable col-category">Category</th>
+                                    <th class="sortable col-frequency">Frequency</th>
+                                    <th class="col-anchor">Anchor Day</th>
+                                    <th class="sortable col-amount">Amount</th>
+                                    <th class="col-busday">Bus. Day</th>
+                                    <th class="col-active">Active</th>
+                                    <th class="col-actions">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td class="col-vendor tooltip" data-tooltip="Payroll Services Inc">Payroll Services Inc</td>
+                                    <td class="col-category"><span class="badge badge-labor">Labor</span></td>
+                                    <td class="col-frequency">Weekly</td>
+                                    <td class="col-anchor">Fri</td>
+                                    <td class="col-amount">-$32,500</td>
+                                    <td class="col-busday"><span class="badge badge-busday">Next</span></td>
+                                    <td class="col-active">
+                                        <label class="toggle">
+                                            <input type="checkbox" checked onchange="toggleActive(this)">
+                                            <span class="toggle-slider"></span>
+                                        </label>
+                                    </td>
+                                    <td class="col-actions">
+                                        <button class="action-btn btn-edit" onclick="openModal()">Edit</button>
+                                        <button class="action-btn btn-delete" onclick="confirmDelete()">Del</button>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td class="col-vendor tooltip" data-tooltip="Amazon Web Services (Cloud Infrastructure)">Amazon Web Services (Cloud...</td>
+                                    <td class="col-category"><span class="badge badge-opex">Opex</span></td>
+                                    <td class="col-frequency">Monthly</td>
+                                    <td class="col-anchor">1st</td>
+                                    <td class="col-amount">-$2,850</td>
+                                    <td class="col-busday"><span class="badge badge-busday">Next</span></td>
+                                    <td class="col-active">
+                                        <label class="toggle">
+                                            <input type="checkbox" checked onchange="toggleActive(this)">
+                                            <span class="toggle-slider"></span>
+                                        </label>
+                                    </td>
+                                    <td class="col-actions">
+                                        <button class="action-btn btn-edit" onclick="openModal()">Edit</button>
+                                        <button class="action-btn btn-delete" onclick="confirmDelete()">Del</button>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td class="col-vendor">City Office Properties LLC</td>
+                                    <td class="col-category"><span class="badge badge-opex">Opex</span></td>
+                                    <td class="col-frequency">Monthly</td>
+                                    <td class="col-anchor">1st</td>
+                                    <td class="col-amount">-$8,400</td>
+                                    <td class="col-busday"><span class="badge badge-busday">Prev</span></td>
+                                    <td class="col-active">
+                                        <label class="toggle">
+                                            <input type="checkbox" checked onchange="toggleActive(this)">
+                                            <span class="toggle-slider"></span>
+                                        </label>
+                                    </td>
+                                    <td class="col-actions">
+                                        <button class="action-btn btn-edit" onclick="openModal()">Edit</button>
+                                        <button class="action-btn btn-delete" onclick="confirmDelete()">Del</button>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td class="col-vendor tooltip" data-tooltip="TechCorp Software Licensing Solutions">TechCorp Software Licensing...</td>
+                                    <td class="col-category"><span class="badge badge-cogs">COGS</span></td>
+                                    <td class="col-frequency">Quarterly</td>
+                                    <td class="col-anchor">Jan 15</td>
+                                    <td class="col-amount">-$15,600</td>
+                                    <td class="col-busday"><span class="badge badge-busday">None</span></td>
+                                    <td class="col-active">
+                                        <label class="toggle">
+                                            <input type="checkbox" checked onchange="toggleActive(this)">
+                                            <span class="toggle-slider"></span>
+                                        </label>
+                                    </td>
+                                    <td class="col-actions">
+                                        <button class="action-btn btn-edit" onclick="openModal()">Edit</button>
+                                        <button class="action-btn btn-delete" onclick="confirmDelete()">Del</button>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td class="col-vendor">Hartford Insurance Co</td>
+                                    <td class="col-category"><span class="badge badge-opex">Opex</span></td>
+                                    <td class="col-frequency">Semimonthly</td>
+                                    <td class="col-anchor">1st & 15th</td>
+                                    <td class="col-amount">-$4,200</td>
+                                    <td class="col-busday"><span class="badge badge-busday">Next</span></td>
+                                    <td class="col-active">
+                                        <label class="toggle">
+                                            <input type="checkbox" checked onchange="toggleActive(this)">
+                                            <span class="toggle-slider"></span>
+                                        </label>
+                                    </td>
+                                    <td class="col-actions">
+                                        <button class="action-btn btn-edit" onclick="openModal()">Edit</button>
+                                        <button class="action-btn btn-delete" onclick="confirmDelete()">Del</button>
+                                    </td>
+                                </tr>
+                                <tr class="inactive">
+                                    <td class="col-vendor tooltip" data-tooltip="Acme Medical Supplies & Equipment">Acme Medical Supplies & Eq...</td>
+                                    <td class="col-category"><span class="badge badge-cogs">COGS</span></td>
+                                    <td class="col-frequency">Weekly</td>
+                                    <td class="col-anchor">Tue</td>
+                                    <td class="col-amount">-$12,450</td>
+                                    <td class="col-busday"><span class="badge badge-busday">Next</span></td>
+                                    <td class="col-active">
+                                        <label class="toggle">
+                                            <input type="checkbox" onchange="toggleActive(this)">
+                                            <span class="toggle-slider"></span>
+                                        </label>
+                                    </td>
+                                    <td class="col-actions">
+                                        <button class="action-btn btn-edit" onclick="openModal()">Edit</button>
+                                        <button class="action-btn btn-delete" onclick="confirmDelete()">Del</button>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td class="col-vendor">Pacific Power Company</td>
+                                    <td class="col-category"><span class="badge badge-opex">Opex</span></td>
+                                    <td class="col-frequency">Monthly</td>
+                                    <td class="col-anchor">15th</td>
+                                    <td class="col-amount">-$2,850</td>
+                                    <td class="col-busday"><span class="badge badge-busday">Next</span></td>
+                                    <td class="col-active">
+                                        <label class="toggle">
+                                            <input type="checkbox" checked onchange="toggleActive(this)">
+                                            <span class="toggle-slider"></span>
+                                        </label>
+                                    </td>
+                                    <td class="col-actions">
+                                        <button class="action-btn btn-edit" onclick="openModal()">Edit</button>
+                                        <button class="action-btn btn-delete" onclick="confirmDelete()">Del</button>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right: Stats Sidebar -->
+            <div class="stats-sidebar">
+                <div class="stat-card">
+                    <div class="stat-label">Total Active Rules</div>
+                    <div class="stat-value">12</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Monthly Forecast</div>
+                    <div class="stat-value">$184,750</div>
+                    <div class="stat-subtext">Outflows only</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Labor Rules</div>
+                    <div class="stat-value">2</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">COGS Rules</div>
+                    <div class="stat-value">4</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Opex Rules</div>
+                    <div class="stat-value">6</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Last Regenerated</div>
+                    <div class="stat-value" style="font-size: 14px;">Nov 20, 10:30 AM</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Create/Edit Rule Modal -->
+    <div class="modal-overlay" id="ruleModal" onclick="closeModalOnBackdrop(event)">
+        <div class="modal" onclick="event.stopPropagation()">
+            <div class="modal-header">
+                <div class="modal-title">Create Payment Rule</div>
+                <button class="modal-close" onclick="closeModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form class="form-grid" id="ruleForm">
+                    <div class="form-group">
+                        <label class="form-label">Vendor</label>
+                        <input type="text" class="form-input" placeholder="Payroll Services Inc" maxlength="100" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Category</label>
+                        <select class="form-select" required>
+                            <option value="">Select category...</option>
+                            <option value="labor">Labor</option>
+                            <option value="cogs">COGS</option>
+                            <option value="opex">Opex</option>
+                            <option value="other">Other</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Amount</label>
+                        <input type="number" class="form-input" placeholder="32,500" step="0.01" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Frequency</label>
+                        <select class="form-select" id="frequencySelect" onchange="updateAnchorField()" required>
+                            <option value="">Select frequency...</option>
+                            <option value="weekly">Weekly</option>
+                            <option value="semimonthly">Semimonthly</option>
+                            <option value="monthly">Monthly</option>
+                            <option value="quarterly">Quarterly</option>
+                            <option value="annual">Annual</option>
+                        </select>
+                    </div>
+
+                    <!-- Anchor Day Fields (Dynamic) -->
+                    <div class="form-group full-width">
+                        <label class="form-label">Anchor Day</label>
+
+                        <!-- Weekly -->
+                        <div class="anchor-field" id="anchor-weekly">
+                            <select class="form-select">
+                                <option value="0">Sunday</option>
+                                <option value="1">Monday</option>
+                                <option value="2">Tuesday</option>
+                                <option value="3">Wednesday</option>
+                                <option value="4">Thursday</option>
+                                <option value="5" selected>Friday</option>
+                                <option value="6">Saturday</option>
+                            </select>
+                        </div>
+
+                        <!-- Semimonthly -->
+                        <div class="anchor-field" id="anchor-semimonthly">
+                            <div class="disabled-text">1st and 15th of each month</div>
+                        </div>
+
+                        <!-- Monthly -->
+                        <div class="anchor-field" id="anchor-monthly">
+                            <div class="anchor-inline">
+                                <input type="number" class="form-input" placeholder="Day (1-31)" min="1" max="31">
+                                <div class="form-checkbox-group">
+                                    <input type="checkbox" class="form-checkbox" id="lastBusinessDay">
+                                    <label for="lastBusinessDay" style="font-size: 12px; color: #64748b;">Last Business Day</label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Quarterly -->
+                        <div class="anchor-field" id="anchor-quarterly">
+                            <div class="anchor-inline">
+                                <input type="text" class="form-input" placeholder="Jan 15" style="flex: 1;">
+                                <input type="text" class="form-input" placeholder="Apr 15" style="flex: 1;">
+                                <input type="text" class="form-input" placeholder="Jul 15" style="flex: 1;">
+                                <input type="text" class="form-input" placeholder="Oct 15" style="flex: 1;">
+                            </div>
+                        </div>
+
+                        <!-- Annual -->
+                        <div class="anchor-field" id="anchor-annual">
+                            <div class="anchor-inline">
+                                <select class="form-select" style="flex: 1;">
+                                    <option value="">Month...</option>
+                                    <option value="1">January</option>
+                                    <option value="2">February</option>
+                                    <option value="3">March</option>
+                                    <option value="4">April</option>
+                                    <option value="5">May</option>
+                                    <option value="6">June</option>
+                                    <option value="7">July</option>
+                                    <option value="8">August</option>
+                                    <option value="9">September</option>
+                                    <option value="10">October</option>
+                                    <option value="11">November</option>
+                                    <option value="12">December</option>
+                                </select>
+                                <input type="number" class="form-input" placeholder="Day (1-31)" min="1" max="31" style="flex: 1;">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Business Day Adjustment</label>
+                        <select class="form-select" required>
+                            <option value="next" selected>Next</option>
+                            <option value="previous">Previous</option>
+                            <option value="none">None</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Active</label>
+                        <div class="form-toggle-group">
+                            <label class="toggle">
+                                <input type="checkbox" checked>
+                                <span class="toggle-slider"></span>
+                            </label>
+                            <span style="font-size: 12px; color: #64748b;">Rule is active</span>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-modal-cancel" onclick="closeModal()">Cancel</button>
+                <button class="btn-modal-save" onclick="saveRule()">Save & Regenerate Forecast</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Notification -->
+    <div class="toast" id="toast">Rule saved successfully! Forecast regenerated.</div>
+
+    <script>
+        // Modal Management
+        function openModal() {
+            document.getElementById('ruleModal').classList.add('active');
+        }
+
+        function closeModal() {
+            document.getElementById('ruleModal').classList.remove('active');
+            document.getElementById('ruleForm').reset();
+            updateAnchorField(); // Reset anchor fields
+        }
+
+        function closeModalOnBackdrop(event) {
+            if (event.target.classList.contains('modal-overlay')) {
+                closeModal();
+            }
+        }
+
+        // Frequency Change Handler
+        function updateAnchorField() {
+            const frequency = document.getElementById('frequencySelect').value;
+            const anchorFields = document.querySelectorAll('.anchor-field');
+
+            // Hide all anchor fields
+            anchorFields.forEach(field => field.classList.remove('active'));
+
+            // Show relevant anchor field
+            if (frequency === 'weekly') {
+                document.getElementById('anchor-weekly').classList.add('active');
+            } else if (frequency === 'semimonthly') {
+                document.getElementById('anchor-semimonthly').classList.add('active');
+            } else if (frequency === 'monthly') {
+                document.getElementById('anchor-monthly').classList.add('active');
+            } else if (frequency === 'quarterly') {
+                document.getElementById('anchor-quarterly').classList.add('active');
+            } else if (frequency === 'annual') {
+                document.getElementById('anchor-annual').classList.add('active');
+            }
+        }
+
+        // Active Toggle Handler
+        function toggleActive(checkbox) {
+            const row = checkbox.closest('tr');
+            if (checkbox.checked) {
+                row.classList.remove('inactive');
+            } else {
+                row.classList.add('inactive');
+            }
+        }
+
+        // Save Rule Handler
+        function saveRule() {
+            // Validation would go here
+
+            // Close modal
+            closeModal();
+
+            // Show toast
+            const toast = document.getElementById('toast');
+            toast.classList.add('active');
+            setTimeout(() => {
+                toast.classList.remove('active');
+            }, 3000);
+
+            // In real implementation, would:
+            // 1. POST to /api/payment-rules
+            // 2. POST to /api/forecast/regenerate
+            // 3. Refresh table
+        }
+
+        // Delete Handler
+        function confirmDelete() {
+            if (confirm('Are you sure you want to delete this rule? This action cannot be undone.')) {
+                // In real implementation, would DELETE from /api/payment-rules
+                alert('Rule deleted (placeholder)');
+            }
+        }
+
+        // Toggle between empty and populated state
+        function toggleState() {
+            document.body.classList.toggle('populated');
+        }
+
+        // Keyboard shortcuts
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                closeModal();
+            }
+        });
+
+        // Table sorting (basic implementation)
+        document.querySelectorAll('.sortable').forEach(th => {
+            th.addEventListener('click', () => {
+                // Placeholder for sorting logic
+                console.log('Sort by:', th.textContent);
+            });
+        });
+    </script>
+</body>
+</html>
