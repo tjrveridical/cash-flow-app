@@ -1,5 +1,6 @@
 import { SupabaseClient } from "@supabase/supabase-js";
 import { WeeklyForecast, CategoryForecast, ForecastParams, ForecastResult } from "./types";
+import { DateGenerator, PaymentRule } from "./date-generator";
 
 /**
  * Get the Sunday (week ending) for a given date
@@ -92,6 +93,7 @@ export class ForecastService {
         )
         .gte("date", formatDate(startDate))
         .lte("date", formatDate(endDate))
+        .eq("classified_bank_transactions.is_verified", true)
         .order("date", { ascending: true });
 
       if (error) {
@@ -207,6 +209,91 @@ export class ForecastService {
               isActual: false, // This is a forecast
               sortOrder: 1, // AR Collections should be first
             });
+          }
+        }
+      }
+
+      // Fetch active forecast items with payment rules for expense projections
+      const { data: forecastItems } = await this.supabase
+        .from("forecast_items")
+        .select(
+          `
+          id,
+          vendor_name,
+          category_code,
+          estimated_amount,
+          payment_rule:payment_rules (
+            id,
+            frequency,
+            anchor_days,
+            exception_rule
+          )
+        `
+        )
+        .eq("is_active", true);
+
+      // Generate expense forecasts from forecast_items
+      if (forecastItems && forecastItems.length > 0) {
+        const dateGenerator = new DateGenerator();
+
+        for (const item of forecastItems) {
+          if (!item.payment_rule || !item.estimated_amount) continue;
+
+          const rule = Array.isArray(item.payment_rule)
+            ? item.payment_rule[0]
+            : item.payment_rule;
+
+          if (!rule) continue;
+
+          // Convert DB rule to PaymentRule interface
+          const paymentRule: PaymentRule = {
+            frequency: rule.frequency,
+            anchor_days: rule.anchor_days,
+            exception_rule: rule.exception_rule,
+          };
+
+          // Generate payment dates for this item
+          const paymentDates = dateGenerator.generateDates(
+            paymentRule,
+            startDate,
+            endDate
+          );
+
+          // For each payment date, add to appropriate week
+          for (const paymentDate of paymentDates) {
+            const weekEnding = formatDate(getWeekEnding(paymentDate));
+
+            // Only add to future weeks (after latest actual transaction)
+            if (new Date(weekEnding) <= latestWeekEnding) continue;
+
+            // Get or create week bucket
+            if (!weekMap.has(weekEnding)) {
+              weekMap.set(weekEnding, new Map());
+            }
+            const categoryBucket = weekMap.get(weekEnding)!;
+
+            // Get category display info
+            const category = categoryMap.get(item.category_code);
+            if (!category) continue;
+
+            // Get or create category bucket
+            if (!categoryBucket.has(item.category_code)) {
+              categoryBucket.set(item.category_code, {
+                displayGroup: category.display_group,
+                displayLabel: category.display_label,
+                displayLabel2: category.display_label2,
+                categoryCode: item.category_code,
+                cashDirection: category.cash_direction as "Cashin" | "Cashout",
+                amount: 0,
+                transactionCount: 0,
+                isActual: false, // This is a forecast
+                sortOrder: category.sort_order || 0,
+              });
+            }
+
+            const cat = categoryBucket.get(item.category_code)!;
+            cat.amount += item.estimated_amount;
+            cat.transactionCount += 1;
           }
         }
       }
