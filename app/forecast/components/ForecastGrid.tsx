@@ -194,11 +194,41 @@ export function ForecastGrid() {
     setEditingCell(null);
   };
 
-  const handleKeyDown = (e: React.KeyboardEvent) => {
+  const handleKeyDown = async (e: React.KeyboardEvent) => {
     if (e.key === "Enter") {
-      handleSaveEdit();
+      e.preventDefault();
+      await handleSaveEdit();
     } else if (e.key === "Escape") {
+      e.preventDefault();
       handleCancelEdit();
+    } else if (e.key === "Tab") {
+      e.preventDefault();
+      await handleSaveEdit();
+
+      // Move to next/previous AR editable cell
+      if (!editingCell) return;
+
+      const editableCells: { weekEnding: string }[] = [];
+      weeks.forEach((w) => {
+        if (isAREditable("ar_collections", w.weekEnding)) {
+          editableCells.push({ weekEnding: w.weekEnding });
+        }
+      });
+
+      const currentIndex = editableCells.findIndex((c) => c.weekEnding === editingCell.weekEnding);
+      if (currentIndex === -1) return;
+
+      const nextIndex = e.shiftKey ? currentIndex - 1 : currentIndex + 1;
+      if (nextIndex >= 0 && nextIndex < editableCells.length) {
+        const nextCell = editableCells[nextIndex];
+        const nextWeek = weeks.find((w) => w.weekEnding === nextCell.weekEnding);
+        if (nextWeek) {
+          const amount = getCategoryAmount(nextWeek, "ar_collections");
+          setTimeout(() => {
+            handleStartEdit(nextCell.weekEnding, "ar_collections", amount);
+          }, 10);
+        }
+      }
     }
   };
 
