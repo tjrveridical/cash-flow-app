@@ -98,6 +98,16 @@ export class ForecastService {
         throw error;
       }
 
+      // Generate ALL week endings in the range
+      const allWeekEndings: string[] = [];
+      let currentWeek = getWeekEnding(new Date(startDate));
+      const finalWeek = getWeekEnding(new Date(endDate));
+
+      while (currentWeek <= finalWeek) {
+        allWeekEndings.push(formatDate(currentWeek));
+        currentWeek = new Date(currentWeek.getTime() + 7 * 24 * 60 * 60 * 1000);
+      }
+
       // Get display categories for mapping
       const { data: categories } = await this.supabase
         .from("display_categories")
@@ -106,8 +116,11 @@ export class ForecastService {
 
       const categoryMap = new Map(categories?.map((c) => [c.category_code, c]) || []);
 
-      // Group transactions by week and category
+      // Initialize weekMap with ALL weeks (empty)
       const weekMap = new Map<string, Map<string, CategoryForecast>>();
+      for (const weekEnding of allWeekEndings) {
+        weekMap.set(weekEnding, new Map());
+      }
 
       for (const tx of transactions || []) {
         const txDate = new Date(tx.date);
@@ -177,12 +190,11 @@ export class ForecastService {
         for (const forecast of arForecasts) {
           const weekEnding = forecast.week_ending;
 
-          // Skip if we already have actuals for this week
-          if (weekMap.has(weekEnding)) continue;
+          // Skip if we already have AR collections actuals for this week
+          const categoryBucket = weekMap.get(weekEnding);
+          if (!categoryBucket || categoryBucket.has("ar_collections")) continue;
 
-          // Create a new week with just the AR forecast
-          const categoryBucket = new Map<string, CategoryForecast>();
-
+          // Add AR forecast to the week
           if (forecast.forecasted_amount > 0) {
             categoryBucket.set("ar_collections", {
               displayGroup: "AR",
@@ -196,8 +208,6 @@ export class ForecastService {
               sortOrder: 1, // AR Collections should be first
             });
           }
-
-          weekMap.set(weekEnding, categoryBucket);
         }
       }
 
