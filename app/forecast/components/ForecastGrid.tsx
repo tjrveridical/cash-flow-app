@@ -168,26 +168,85 @@ export function ForecastGrid() {
   const handleSaveEdit = async () => {
     if (!editingCell) return;
 
-    const amount = parseFloat(editingCell.value.replace(/[^0-9.-]/g, ""));
-    if (!isNaN(amount) && amount >= 0) {
-      try {
-        await fetch("/api/ar-forecast", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            week_ending: editingCell.weekEnding,
-            forecasted_amount: amount,
-          }),
-        });
-
-        // Refresh forecast data
-        await fetchForecastData();
-      } catch (error) {
-        console.error("Error saving AR forecast:", error);
-      }
+    const numValue = parseFloat(editingCell.value.replace(/[^0-9.-]/g, ""));
+    if (isNaN(numValue) || numValue < 0) {
+      setEditingCell(null);
+      return;
     }
 
-    setEditingCell(null);
+    // Optimistic update: Update UI immediately
+    setWeeks((prevWeeks) => {
+      const weekIndex = prevWeeks.findIndex((w) => w.weekEnding === editingCell.weekEnding);
+      if (weekIndex === -1) return prevWeeks;
+
+      const updatedWeeks = [...prevWeeks];
+
+      // Update the AR Collections amount for this week
+      const week = { ...updatedWeeks[weekIndex] };
+      const updatedCategories = week.categories.map((cat) => {
+        if (cat.categoryCode === "ar_collections") {
+          return { ...cat, amount: numValue, isActual: false };
+        }
+        return cat;
+      });
+
+      // If AR Collections doesn't exist yet, add it
+      if (!updatedCategories.some((c) => c.categoryCode === "ar_collections")) {
+        updatedCategories.push({
+          displayGroup: "AR",
+          displayLabel: "AR Collections",
+          displayLabel2: null,
+          categoryCode: "ar_collections",
+          cashDirection: "Cashin",
+          amount: numValue,
+          transactionCount: 0,
+          isActual: false,
+          sortOrder: 1,
+        });
+      }
+
+      // Recalculate totals for this week
+      const totalInflows = updatedCategories
+        .filter((c) => c.cashDirection === "Cashin")
+        .reduce((sum, c) => sum + c.amount, 0);
+
+      const netCashFlow = totalInflows - week.totalOutflows;
+      const endingCash = week.beginningCash + netCashFlow;
+
+      week.categories = updatedCategories;
+      week.totalInflows = totalInflows;
+      week.netCashFlow = netCashFlow;
+      week.endingCash = endingCash;
+      updatedWeeks[weekIndex] = week;
+
+      // Propagate cash flow changes to subsequent weeks
+      for (let i = weekIndex + 1; i < updatedWeeks.length; i++) {
+        const prevWeek = updatedWeeks[i - 1];
+        const currentWeek = { ...updatedWeeks[i] };
+        currentWeek.beginningCash = prevWeek.endingCash;
+        currentWeek.netCashFlow = currentWeek.totalInflows - currentWeek.totalOutflows;
+        currentWeek.endingCash = currentWeek.beginningCash + currentWeek.netCashFlow;
+        updatedWeeks[i] = currentWeek;
+      }
+
+      return updatedWeeks;
+    });
+
+    setEditingCell(null); // Close editor immediately
+
+    // Save to database in background (don't await)
+    fetch("/api/ar-forecast", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        week_ending: editingCell.weekEnding,
+        forecasted_amount: numValue,
+      }),
+    }).catch((error) => {
+      // On error, refetch to revert optimistic update
+      console.error("Failed to save AR forecast:", error);
+      fetchForecastData();
+    });
   };
 
   const handleCancelEdit = () => {
