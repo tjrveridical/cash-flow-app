@@ -44,7 +44,7 @@ export async function PUT(
       .select(
         `
         *,
-        rule:payment_rules (*)
+        rule:payment_rules!rule_id (*)
       `
       )
       .single();

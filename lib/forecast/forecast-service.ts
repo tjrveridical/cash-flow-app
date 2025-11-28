@@ -222,7 +222,7 @@ export class ForecastService {
           vendor_name,
           category_code,
           estimated_amount,
-          payment_rule:payment_rules (
+          payment_rule:payment_rules!rule_id (
             id,
             frequency,
             anchor_days,

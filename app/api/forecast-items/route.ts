@@ -14,7 +14,7 @@ export async function GET() {
       .select(
         `
         *,
-        rule:payment_rules (*)
+        rule:payment_rules!rule_id (*)
       `
       )
       .order("vendor_name", { ascending: true });
@@ -118,7 +118,7 @@ export async function POST(request: Request) {
       .select(
         `
         *,
-        rule:payment_rules (*)
+        rule:payment_rules!rule_id (*)
       `
       )
       .single();
