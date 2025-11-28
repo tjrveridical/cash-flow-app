@@ -17,7 +17,6 @@ export async function GET() {
         rule:payment_rules (*)
       `
       )
-      .eq("is_active", true)
       .order("vendor_name", { ascending: true });
 
     if (error) {

@@ -1,7 +1,12 @@
+"use client";
+
+import { useRouter } from "next/navigation";
 import { ControlsBar } from "./components/ControlsBar";
 import { ForecastGrid } from "./components/ForecastGrid";
 
 export default function ForecastPage() {
+  const router = useRouter();
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#f8faf9] to-[#f5f7f6]">
       {/* Header */}
@@ -16,6 +21,12 @@ export default function ForecastPage() {
             </button>
             <button className="px-4 py-2 text-xs font-medium text-white bg-gradient-to-br from-[#2d5a2d] to-[#3d6b3d] rounded-lg hover:shadow-lg hover:shadow-[#2d5a2d]/20 transition-all">
               Set Beginning Cash
+            </button>
+            <button
+              onClick={() => router.push("/forecast-items")}
+              className="px-4 py-2 text-xs font-medium text-white bg-gradient-to-br from-[#2d5a2d] to-[#3d6b3d] rounded-lg hover:shadow-lg hover:shadow-[#2d5a2d]/20 transition-all"
+            >
+              Manage Expenses
             </button>
             <div className="bg-gradient-to-br from-[#1e3a1e] to-[#2d5a2d] text-white/90 px-3 py-1.5 rounded-md text-[11px] font-semibold tracking-wide shadow-sm">
               CFO
