@@ -400,9 +400,6 @@ export function ForecastGrid() {
               <tr key={cat.categoryCode} className="data-row">
                 <td className="category-cell" title={cat.displayLabel}>
                   {cat.displayLabel}
-                  {cat.categoryCode === "ar_collections" && (
-                    <span className="text-xs text-blue-600 ml-2">(editable)</span>
-                  )}
                 </td>
                 {cat.categoryCode === "ar_collections"
                   ? weeks.map((w) => renderARCell(w, cat))
@@ -679,7 +676,7 @@ export function ForecastGrid() {
         }
 
         .week-dates {
-          background: linear-gradient(135deg, rgba(248, 250, 249, 0.9) 0%, rgba(248, 250, 249, 0.7) 100%);
+          background: linear-gradient(135deg, rgb(248, 250, 249) 0%, rgb(248, 250, 249) 100%);
           border-bottom: 1px solid rgba(30, 58, 30, 0.08);
           position: sticky;
           top: 44px;
@@ -699,7 +696,7 @@ export function ForecastGrid() {
         .week-dates td:first-child {
           position: sticky;
           left: 0;
-          background: linear-gradient(135deg, rgba(241, 245, 249, 0.9) 0%, rgba(241, 245, 249, 0.7) 100%);
+          background: linear-gradient(135deg, rgb(241, 245, 249) 0%, rgb(241, 245, 249) 100%);
           z-index: 21;
         }
 
@@ -781,7 +778,7 @@ export function ForecastGrid() {
           text-align: right;
           white-space: nowrap;
           font-weight: 500;
-          background: rgba(255, 255, 255, 0.8);
+          background: rgb(255, 255, 255);
           height: 36px;
           vertical-align: middle;
         }
@@ -795,7 +792,7 @@ export function ForecastGrid() {
           font-weight: 600;
           color: #374151;
           border-right: 1px solid rgba(30, 58, 30, 0.08) !important;
-          background: linear-gradient(135deg, rgba(250, 250, 250, 0.9) 0%, rgba(250, 250, 250, 0.7) 100%) !important;
+          background: linear-gradient(135deg, rgb(250, 250, 250) 0%, rgb(250, 250, 250) 100%) !important;
           cursor: help;
           position: sticky;
           left: 0;
@@ -811,7 +808,7 @@ export function ForecastGrid() {
 
         /* Total rows */
         .total-row {
-          background: linear-gradient(135deg, rgba(248, 250, 249, 0.9) 0%, rgba(248, 250, 249, 0.7) 100%);
+          background: linear-gradient(135deg, rgb(248, 250, 249) 0%, rgb(248, 250, 249) 100%);
           font-weight: 700;
           border-top: 2px solid rgba(45, 90, 45, 0.2);
           border-bottom: 2px solid rgba(45, 90, 45, 0.2);
