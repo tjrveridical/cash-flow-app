@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useRef } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import { DetailModal } from "./DetailModal";
 
 interface WeeklyForecast {
@@ -134,6 +134,36 @@ export function ForecastGrid() {
     return Array.from(allCats.values())
       .filter((c) => c.displayGroup === group)
       .sort((a, b) => a.sortOrder - b.sortOrder);
+  };
+
+  // Get unique display groups sorted by sort_order
+  const getUniqueGroups = (cashDirection: "Cashin" | "Cashout"): string[] => {
+    const groupsWithOrder = new Map<string, number>();
+    weeks.forEach((w) =>
+      w.categories.forEach((c) => {
+        if (c.cashDirection === cashDirection && !groupsWithOrder.has(c.displayGroup)) {
+          groupsWithOrder.set(c.displayGroup, c.sortOrder);
+        }
+      })
+    );
+    return Array.from(groupsWithOrder.entries())
+      .sort((a, b) => a[1] - b[1])
+      .map(([group]) => group);
+  };
+
+  // Calculate group total for a specific week
+  const getGroupTotal = (week: WeeklyForecast, group: string): number => {
+    return week.categories
+      .filter((c) => c.displayGroup === group)
+      .reduce((sum, c) => sum + c.amount, 0);
+  };
+
+  // Format category display name with hierarchy
+  const formatCategoryName = (cat: CategoryForecast): string => {
+    if (cat.displayLabel2) {
+      return `${cat.displayLabel} > ${cat.displayLabel2}`;
+    }
+    return cat.displayLabel;
   };
 
   const handleAmountClick = (category: string, weekEnding: string, amount: number) => {
@@ -429,160 +459,60 @@ export function ForecastGrid() {
               ))}
             </tr>
 
-            {/* Labor */}
-            {getCategoriesByGroup("Labor").length > 0 && (
-              <>
-                <tr className="section-header labor">
-                  <td colSpan={weeks.length + 1}>LABOR</td>
-                </tr>
-                {getCategoriesByGroup("Labor").map((cat) => (
-                  <tr key={cat.categoryCode} className="data-row">
-                    <td className="category-cell" title={cat.displayLabel}>
-                      {cat.displayLabel}
-                    </td>
-                    {weeks.map((w) => {
-                      const amount = getCategoryAmount(w, cat.categoryCode);
-                      const isActual = isCategoryActual(w, cat.categoryCode);
-                      return (
-                        <td
-                          key={w.weekEnding}
-                          className={`amount-cell ${amount >= 0 ? "amount-positive" : "amount-negative"} ${
-                            isActual ? "amount-actual" : "amount-forecast"
-                          } ${amount !== 0 ? "clickable-amount" : ""}`}
-                          onClick={() => amount !== 0 && handleAmountClick(cat.displayLabel, w.weekEnding, amount)}
-                        >
-                          {amount !== 0 ? formatCurrency(amount) : "$0"}
-                        </td>
-                      );
-                    })}
-                  </tr>
-                ))}
-              </>
-            )}
+            {/* Cash Outflows - Dynamic Groups */}
+            {getUniqueGroups("Cashout").map((group) => {
+              const categories = getCategoriesByGroup(group);
+              if (categories.length === 0) return null;
 
-            {/* COGS */}
-            {getCategoriesByGroup("COGS").length > 0 && (
-              <>
-                <tr className="section-header cogs">
-                  <td colSpan={weeks.length + 1}>COGS</td>
-                </tr>
-                {getCategoriesByGroup("COGS").map((cat) => (
-                  <tr key={cat.categoryCode} className="data-row">
-                    <td className="category-cell" title={cat.displayLabel}>
-                      {cat.displayLabel}
+              return (
+                <React.Fragment key={group}>
+                  <tr className="section-header labor">
+                    <td colSpan={weeks.length + 1}>{group.toUpperCase()}</td>
+                  </tr>
+                  {/* Group Total Row */}
+                  <tr className="data-row group-total-row">
+                    <td className="category-cell group-total-label" title={`Total for ${group} category`}>
+                      {group}
                     </td>
                     {weeks.map((w) => {
-                      const amount = getCategoryAmount(w, cat.categoryCode);
-                      const isActual = isCategoryActual(w, cat.categoryCode);
+                      const total = getGroupTotal(w, group);
                       return (
                         <td
                           key={w.weekEnding}
-                          className={`amount-cell ${amount >= 0 ? "amount-positive" : "amount-negative"} ${
-                            isActual ? "amount-actual" : "amount-forecast"
-                          } ${amount !== 0 ? "clickable-amount" : ""}`}
-                          onClick={() => amount !== 0 && handleAmountClick(cat.displayLabel, w.weekEnding, amount)}
+                          className="amount-cell amount-negative amount-actual group-total-amount"
                         >
-                          {amount !== 0 ? formatCurrency(amount) : "$0"}
+                          {total !== 0 ? formatCurrency(total) : "$0"}
                         </td>
                       );
                     })}
                   </tr>
-                ))}
-              </>
-            )}
+                  {/* Child Category Rows */}
+                  {categories.map((cat) => (
+                    <tr key={cat.categoryCode} className="data-row child-row">
+                      <td className="category-cell child-category" title={formatCategoryName(cat)}>
+                        {formatCategoryName(cat)}
+                      </td>
+                      {weeks.map((w) => {
+                        const amount = getCategoryAmount(w, cat.categoryCode);
+                        const isActual = isCategoryActual(w, cat.categoryCode);
+                        return (
+                          <td
+                            key={w.weekEnding}
+                            className={`amount-cell ${amount >= 0 ? "amount-positive" : "amount-negative"} ${
+                              isActual ? "amount-actual" : "amount-forecast"
+                            } ${amount !== 0 ? "clickable-amount" : ""}`}
+                            onClick={() => amount !== 0 && handleAmountClick(formatCategoryName(cat), w.weekEnding, amount)}
+                          >
+                            {amount !== 0 ? formatCurrency(amount) : "$0"}
+                          </td>
+                        );
+                      })}
+                    </tr>
+                  ))}
+                </React.Fragment>
+              );
+            })}
 
-            {/* Facilities */}
-            {getCategoriesByGroup("Facilities").length > 0 && (
-              <>
-                <tr className="section-header facilities">
-                  <td colSpan={weeks.length + 1}>FACILITIES</td>
-                </tr>
-                {getCategoriesByGroup("Facilities").map((cat) => (
-                  <tr key={cat.categoryCode} className="data-row">
-                    <td className="category-cell" title={cat.displayLabel}>
-                      {cat.displayLabel}
-                    </td>
-                    {weeks.map((w) => {
-                      const amount = getCategoryAmount(w, cat.categoryCode);
-                      const isActual = isCategoryActual(w, cat.categoryCode);
-                      return (
-                        <td
-                          key={w.weekEnding}
-                          className={`amount-cell ${amount >= 0 ? "amount-positive" : "amount-negative"} ${
-                            isActual ? "amount-actual" : "amount-forecast"
-                          } ${amount !== 0 ? "clickable-amount" : ""}`}
-                          onClick={() => amount !== 0 && handleAmountClick(cat.displayLabel, w.weekEnding, amount)}
-                        >
-                          {amount !== 0 ? formatCurrency(amount) : "$0"}
-                        </td>
-                      );
-                    })}
-                  </tr>
-                ))}
-              </>
-            )}
-
-            {/* NL Opex */}
-            {getCategoriesByGroup("NL Opex").length > 0 && (
-              <>
-                <tr className="section-header opex">
-                  <td colSpan={weeks.length + 1}>NL OPEX</td>
-                </tr>
-                {getCategoriesByGroup("NL Opex").map((cat) => (
-                  <tr key={cat.categoryCode} className="data-row">
-                    <td className="category-cell" title={cat.displayLabel}>
-                      {cat.displayLabel}
-                    </td>
-                    {weeks.map((w) => {
-                      const amount = getCategoryAmount(w, cat.categoryCode);
-                      const isActual = isCategoryActual(w, cat.categoryCode);
-                      return (
-                        <td
-                          key={w.weekEnding}
-                          className={`amount-cell ${amount >= 0 ? "amount-positive" : "amount-negative"} ${
-                            isActual ? "amount-actual" : "amount-forecast"
-                          } ${amount !== 0 ? "clickable-amount" : ""}`}
-                          onClick={() => amount !== 0 && handleAmountClick(cat.displayLabel, w.weekEnding, amount)}
-                        >
-                          {amount !== 0 ? formatCurrency(amount) : "$0"}
-                        </td>
-                      );
-                    })}
-                  </tr>
-                ))}
-              </>
-            )}
-
-            {/* Other/Unclassified */}
-            {getCategoriesByGroup("Other").length > 0 && (
-              <>
-                <tr className="section-header other">
-                  <td colSpan={weeks.length + 1}>OTHER</td>
-                </tr>
-                {getCategoriesByGroup("Other").map((cat) => (
-                  <tr key={cat.categoryCode} className="data-row">
-                    <td className="category-cell" title={cat.displayLabel}>
-                      {cat.displayLabel}
-                    </td>
-                    {weeks.map((w) => {
-                      const amount = getCategoryAmount(w, cat.categoryCode);
-                      const isActual = isCategoryActual(w, cat.categoryCode);
-                      return (
-                        <td
-                          key={w.weekEnding}
-                          className={`amount-cell ${amount >= 0 ? "amount-positive" : "amount-negative"} ${
-                            isActual ? "amount-actual" : "amount-forecast"
-                          } ${amount !== 0 ? "clickable-amount" : ""}`}
-                          onClick={() => amount !== 0 && handleAmountClick(cat.displayLabel, w.weekEnding, amount)}
-                        >
-                          {amount !== 0 ? formatCurrency(amount) : "$0"}
-                        </td>
-                      );
-                    })}
-                  </tr>
-                ))}
-              </>
-            )}
 
             {/* Totals */}
             <tr className="data-row total-row">
@@ -804,6 +734,33 @@ export function ForecastGrid() {
 
         .category-cell:hover {
           color: #2d5a2d;
+        }
+
+        /* Group total rows */
+        .group-total-row {
+          background: linear-gradient(135deg, rgb(250, 250, 250) 0%, rgb(248, 249, 250) 100%);
+        }
+
+        .group-total-label {
+          font-weight: 600 !important;
+          font-size: 14px !important;
+          color: #1e3a1e !important;
+        }
+
+        .group-total-amount {
+          font-weight: 700 !important;
+        }
+
+        /* Child category rows */
+        .child-row td {
+          background: rgb(255, 255, 255) !important;
+        }
+
+        .child-category {
+          padding-left: 24px !important;
+          font-size: 13px !important;
+          font-weight: 500 !important;
+          color: #475569 !important;
         }
 
         /* Total rows */
