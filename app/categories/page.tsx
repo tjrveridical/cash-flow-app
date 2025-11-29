@@ -4,6 +4,7 @@ import { useEffect, useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 
 interface Category {
+  id: string;
   category_code: string;
   display_group: string;
   display_label: string;
@@ -242,10 +243,10 @@ export default function CategoriesPage() {
           )}
 
           <div className="bg-gradient-to-br from-white/95 to-white/90 backdrop-blur-[24px] rounded-xl shadow-lg shadow-[#1e3a1e]/4 border border-[#1e3a1e]/8 overflow-hidden">
-            <div className="overflow-x-auto">
+            <div className="overflow-x-auto max-h-[calc(100vh-200px)] overflow-y-auto">
               <table className="w-full" style={{ borderCollapse: "separate", borderSpacing: 0 }}>
-                <thead>
-                  <tr className="bg-gradient-to-br from-[#f8faf9]/90 to-[#f8faf9]/70">
+                <thead className="sticky top-0 z-10">
+                  <tr className="bg-gradient-to-br from-[#f8faf9]/90 to-[#f8faf9]/70 backdrop-blur-sm">
                     <th className="px-4 py-3 text-left text-[11px] font-semibold text-slate-600 uppercase tracking-wide border-b border-[#1e3a1e]/8 w-32">
                       Display Group
                     </th>
@@ -294,7 +295,7 @@ export default function CategoriesPage() {
 
                     return (
                       <tr
-                        key={category.category_code}
+                        key={category.id}
                         onClick={() => !editingRow && handleEdit(category)}
                         className={`cursor-pointer hover:bg-[#f0f8f2]/30 transition-all ${
                           isSuccess ? "bg-green-50" : ""
@@ -435,7 +436,7 @@ function EditingRowComponent({
       <td className="px-2 py-2 border-b border-[#1e3a1e]/4">
         <select
           ref={firstInputRef}
-          value={editingRow.display_group}
+          value={editingRow.display_group || ""}
           onChange={(e) => setEditingRow({ ...editingRow, display_group: e.target.value })}
           className="w-full px-2 py-1.5 text-sm border border-slate-300 rounded focus:outline-none focus:ring-2 focus:ring-[#2d5a2d] focus:border-transparent bg-white"
         >
@@ -450,7 +451,7 @@ function EditingRowComponent({
       <td className="px-2 py-2 border-b border-[#1e3a1e]/4">
         <input
           type="text"
-          value={editingRow.display_label}
+          value={editingRow.display_label || ""}
           onChange={(e) => setEditingRow({ ...editingRow, display_label: e.target.value })}
           className="w-full px-2 py-1.5 text-sm border border-slate-300 rounded focus:outline-none focus:ring-2 focus:ring-[#2d5a2d] focus:border-transparent"
           spellCheck="true"
@@ -459,7 +460,7 @@ function EditingRowComponent({
       <td className="px-2 py-2 border-b border-[#1e3a1e]/4">
         <input
           type="text"
-          value={editingRow.display_label2}
+          value={editingRow.display_label2 || ""}
           onChange={(e) => setEditingRow({ ...editingRow, display_label2: e.target.value })}
           className="w-full px-2 py-1.5 text-sm border border-slate-300 rounded focus:outline-none focus:ring-2 focus:ring-[#2d5a2d] focus:border-transparent"
           placeholder="Optional"
@@ -469,7 +470,7 @@ function EditingRowComponent({
       <td className="px-2 py-2 border-b border-[#1e3a1e]/4">
         <input
           type="text"
-          value={editingRow.category_code_value}
+          value={editingRow.category_code_value || ""}
           onChange={(e) => setEditingRow({ ...editingRow, category_code_value: e.target.value })}
           className="w-full px-2 py-1.5 text-sm border border-slate-300 rounded focus:outline-none focus:ring-2 focus:ring-[#2d5a2d] focus:border-transparent font-mono"
           placeholder={generateCategoryCode(editingRow.display_group, editingRow.display_label)}
