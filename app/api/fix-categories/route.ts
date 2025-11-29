@@ -16,7 +16,6 @@ export async function POST() {
         display_label: "Unclassified",
         display_label2: null,
         cash_direction: "Cashout",
-        scope: "forecast",
         sort_order: 9999,
       }, { onConflict: "category_code" });
 
