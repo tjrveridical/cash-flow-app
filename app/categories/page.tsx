@@ -247,25 +247,25 @@ export default function CategoriesPage() {
               <table className="w-full" style={{ borderCollapse: "separate", borderSpacing: 0 }}>
                 <thead className="sticky top-0 z-10">
                   <tr className="bg-gradient-to-br from-[#f8faf9]/90 to-[#f8faf9]/70 backdrop-blur-sm">
-                    <th className="px-4 py-3 text-left text-[11px] font-semibold text-slate-600 uppercase tracking-wide border-b border-[#1e3a1e]/8 w-32">
+                    <th className="px-4 py-2 text-left text-[11px] font-semibold text-slate-600 uppercase tracking-wide border-b border-[#1e3a1e]/8 w-32">
                       Display Group
                     </th>
-                    <th className="px-4 py-3 text-left text-[11px] font-semibold text-slate-600 uppercase tracking-wide border-b border-[#1e3a1e]/8">
+                    <th className="px-4 py-2 text-left text-[11px] font-semibold text-slate-600 uppercase tracking-wide border-b border-[#1e3a1e]/8">
                       Display Label
                     </th>
-                    <th className="px-4 py-3 text-left text-[11px] font-semibold text-slate-600 uppercase tracking-wide border-b border-[#1e3a1e]/8">
+                    <th className="px-4 py-2 text-left text-[11px] font-semibold text-slate-600 uppercase tracking-wide border-b border-[#1e3a1e]/8">
                       Display Label2
                     </th>
-                    <th className="px-4 py-3 text-left text-[11px] font-semibold text-slate-600 uppercase tracking-wide border-b border-[#1e3a1e]/8">
+                    <th className="px-4 py-2 text-left text-[11px] font-semibold text-slate-600 uppercase tracking-wide border-b border-[#1e3a1e]/8">
                       Category Code
                     </th>
-                    <th className="px-4 py-3 text-left text-[11px] font-semibold text-slate-600 uppercase tracking-wide border-b border-[#1e3a1e]/8 w-28">
+                    <th className="px-4 py-2 text-left text-[11px] font-semibold text-slate-600 uppercase tracking-wide border-b border-[#1e3a1e]/8 w-28">
                       Cash Direction
                     </th>
-                    <th className="px-4 py-3 text-right text-[11px] font-semibold text-slate-600 uppercase tracking-wide border-b border-[#1e3a1e]/8 w-24">
+                    <th className="px-4 py-2 text-right text-[11px] font-semibold text-slate-600 uppercase tracking-wide border-b border-[#1e3a1e]/8 w-24">
                       Sort Order
                     </th>
-                    <th className="px-4 py-3 text-center text-[11px] font-semibold text-slate-600 uppercase tracking-wide border-b border-[#1e3a1e]/8 w-32">
+                    <th className="px-4 py-2 text-center text-[11px] font-semibold text-slate-600 uppercase tracking-wide border-b border-[#1e3a1e]/8 w-32">
                       Actions
                     </th>
                   </tr>
@@ -301,19 +301,19 @@ export default function CategoriesPage() {
                           isSuccess ? "bg-green-50" : ""
                         }`}
                       >
-                        <td className="px-4 py-3 text-sm font-medium text-slate-900 border-b border-[#1e3a1e]/4">
+                        <td className="px-4 py-1.5 text-sm font-medium text-slate-900 border-b border-[#1e3a1e]/4">
                           {category.display_group}
                         </td>
-                        <td className="px-4 py-3 text-sm text-slate-700 border-b border-[#1e3a1e]/4">
+                        <td className="px-4 py-1.5 text-sm text-slate-700 border-b border-[#1e3a1e]/4">
                           {category.display_label}
                         </td>
-                        <td className="px-4 py-3 text-sm text-slate-500 border-b border-[#1e3a1e]/4">
+                        <td className="px-4 py-1.5 text-sm text-slate-500 border-b border-[#1e3a1e]/4">
                           {category.display_label2 || "-"}
                         </td>
-                        <td className="px-4 py-3 text-sm text-slate-600 font-mono border-b border-[#1e3a1e]/4">
+                        <td className="px-4 py-1.5 text-sm text-slate-600 font-mono border-b border-[#1e3a1e]/4">
                           {category.category_code}
                         </td>
-                        <td className="px-4 py-3 text-sm text-slate-700 border-b border-[#1e3a1e]/4">
+                        <td className="px-4 py-1.5 text-sm text-slate-700 border-b border-[#1e3a1e]/4">
                           <span
                             className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
                               category.cash_direction === "Cashin"
@@ -324,16 +324,16 @@ export default function CategoriesPage() {
                             {category.cash_direction}
                           </span>
                         </td>
-                        <td className="px-4 py-3 text-sm text-right text-slate-600 border-b border-[#1e3a1e]/4">
+                        <td className="px-4 py-1.5 text-sm text-right text-slate-600 border-b border-[#1e3a1e]/4">
                           {category.sort_order}
                         </td>
-                        <td className="px-4 py-3 text-center border-b border-[#1e3a1e]/4">
+                        <td className="px-4 py-1.5 text-center border-b border-[#1e3a1e]/4">
                           <button
                             onClick={(e) => {
                               e.stopPropagation();
                               handleDelete(category.category_code);
                             }}
-                            className="px-3 py-1.5 text-[11px] font-medium text-red-700 bg-red-50 border border-red-200 rounded-md hover:bg-red-100 hover:border-red-300 transition-all"
+                            className="px-3 py-1 text-[11px] font-medium text-red-700 bg-red-50 border border-red-200 rounded-md hover:bg-red-100 hover:border-red-300 transition-all"
                           >
                             Delete
                           </button>
@@ -433,7 +433,7 @@ function EditingRowComponent({
 
   return (
     <tr className="bg-blue-50/50 border-l-4 border-l-blue-500" onKeyDown={handleKeyDown}>
-      <td className="px-2 py-2 border-b border-[#1e3a1e]/4">
+      <td className="px-2 py-1 border-b border-[#1e3a1e]/4">
         <select
           ref={firstInputRef}
           value={editingRow.display_group || ""}
@@ -448,7 +448,7 @@ function EditingRowComponent({
           ))}
         </select>
       </td>
-      <td className="px-2 py-2 border-b border-[#1e3a1e]/4">
+      <td className="px-2 py-1 border-b border-[#1e3a1e]/4">
         <input
           type="text"
           value={editingRow.display_label || ""}
@@ -457,7 +457,7 @@ function EditingRowComponent({
           spellCheck="true"
         />
       </td>
-      <td className="px-2 py-2 border-b border-[#1e3a1e]/4">
+      <td className="px-2 py-1 border-b border-[#1e3a1e]/4">
         <input
           type="text"
           value={editingRow.display_label2 || ""}
@@ -467,7 +467,7 @@ function EditingRowComponent({
           spellCheck="true"
         />
       </td>
-      <td className="px-2 py-2 border-b border-[#1e3a1e]/4">
+      <td className="px-2 py-1 border-b border-[#1e3a1e]/4">
         <input
           type="text"
           value={editingRow.category_code_value || ""}
@@ -476,7 +476,7 @@ function EditingRowComponent({
           placeholder={generateCategoryCode(editingRow.display_group, editingRow.display_label)}
         />
       </td>
-      <td className="px-2 py-2 border-b border-[#1e3a1e]/4">
+      <td className="px-2 py-1 border-b border-[#1e3a1e]/4">
         <select
           value={editingRow.cash_direction}
           onChange={(e) =>
@@ -491,7 +491,7 @@ function EditingRowComponent({
           ))}
         </select>
       </td>
-      <td className="px-2 py-2 border-b border-[#1e3a1e]/4">
+      <td className="px-2 py-1 border-b border-[#1e3a1e]/4">
         <input
           type="number"
           value={editingRow.sort_order}
@@ -502,19 +502,19 @@ function EditingRowComponent({
           placeholder={suggestSortOrder(editingRow.display_group).toString()}
         />
       </td>
-      <td className="px-2 py-2 text-center border-b border-[#1e3a1e]/4">
+      <td className="px-2 py-1 text-center border-b border-[#1e3a1e]/4">
         <div className="flex gap-1 justify-center">
           <button
             onClick={handleSave}
             disabled={saving}
-            className="px-3 py-1.5 text-[11px] font-medium text-white bg-gradient-to-br from-[#2d5a2d] to-[#3d6b3d] rounded-md hover:shadow-md transition-all disabled:opacity-50"
+            className="px-3 py-1 text-[11px] font-medium text-white bg-gradient-to-br from-[#2d5a2d] to-[#3d6b3d] rounded-md hover:shadow-md transition-all disabled:opacity-50"
           >
             {saving ? "..." : "Save"}
           </button>
           <button
             onClick={handleCancel}
             disabled={saving}
-            className="px-3 py-1.5 text-[11px] font-medium text-slate-700 bg-white border border-slate-300 rounded-md hover:bg-slate-50 transition-all disabled:opacity-50"
+            className="px-3 py-1 text-[11px] font-medium text-slate-700 bg-white border border-slate-300 rounded-md hover:bg-slate-50 transition-all disabled:opacity-50"
           >
             Cancel
           </button>
