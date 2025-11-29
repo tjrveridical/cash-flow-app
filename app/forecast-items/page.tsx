@@ -25,6 +25,7 @@ interface ForecastItem {
 interface DisplayCategory {
   category_code: string;
   display_label: string;
+  display_label2: string | null;
   display_group: string;
   cash_direction: string;
   sort_order: number;
@@ -388,7 +389,7 @@ function CreateEditModal({
               <option value="">Select category...</option>
               {categories.map((cat) => (
                 <option key={cat.category_code} value={cat.category_code}>
-                  {cat.display_group} &gt; {cat.display_label}
+                  {cat.display_group} &gt; {cat.display_label}{cat.display_label2 ? ` > ${cat.display_label2}` : ''}
                 </option>
               ))}
             </select>
