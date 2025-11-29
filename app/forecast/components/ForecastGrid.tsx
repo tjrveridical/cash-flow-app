@@ -35,6 +35,7 @@ export function ForecastGrid() {
   const [weeks, setWeeks] = useState<WeeklyForecast[]>([]);
   const [loading, setLoading] = useState(true);
   const [editingCell, setEditingCell] = useState<EditingCell | null>(null);
+  const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
   const [modalState, setModalState] = useState({
     isOpen: false,
     title: "",
@@ -164,6 +165,19 @@ export function ForecastGrid() {
       return `${cat.displayLabel} > ${cat.displayLabel2}`;
     }
     return cat.displayLabel;
+  };
+
+  // Toggle group expansion
+  const toggleGroupExpansion = (group: string) => {
+    setExpandedGroups((prev) => {
+      const next = new Set(prev);
+      if (next.has(group)) {
+        next.delete(group);
+      } else {
+        next.add(group);
+      }
+      return next;
+    });
   };
 
   const handleAmountClick = (category: string, weekEnding: string, amount: number) => {
@@ -463,6 +477,7 @@ export function ForecastGrid() {
             {getUniqueGroups("Cashout").map((group) => {
               const categories = getCategoriesByGroup(group);
               if (categories.length === 0) return null;
+              const isExpanded = expandedGroups.has(group);
 
               return (
                 <React.Fragment key={group}>
@@ -470,9 +485,12 @@ export function ForecastGrid() {
                     <td colSpan={weeks.length + 1}>{group.toUpperCase()}</td>
                   </tr>
                   {/* Group Total Row */}
-                  <tr className="data-row group-total-row">
-                    <td className="category-cell group-total-label" title={`Total for ${group} category`}>
-                      {group}
+                  <tr
+                    className="data-row group-total-row clickable-group-row"
+                    onClick={() => toggleGroupExpansion(group)}
+                  >
+                    <td className="category-cell group-total-label" title={`Click to ${isExpanded ? 'collapse' : 'expand'} ${group} category`}>
+                      <span className="expand-icon">{isExpanded ? '▼' : '▶'}</span> {group}
                     </td>
                     {weeks.map((w) => {
                       const total = getGroupTotal(w, group);
@@ -487,7 +505,7 @@ export function ForecastGrid() {
                     })}
                   </tr>
                   {/* Child Category Rows */}
-                  {categories.map((cat) => (
+                  {isExpanded && categories.map((cat) => (
                     <tr key={cat.categoryCode} className="data-row child-row">
                       <td className="category-cell child-category" title={formatCategoryName(cat)}>
                         {formatCategoryName(cat)}
@@ -501,7 +519,10 @@ export function ForecastGrid() {
                             className={`amount-cell ${amount >= 0 ? "amount-positive" : "amount-negative"} ${
                               isActual ? "amount-actual" : "amount-forecast"
                             } ${amount !== 0 ? "clickable-amount" : ""}`}
-                            onClick={() => amount !== 0 && handleAmountClick(formatCategoryName(cat), w.weekEnding, amount)}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              amount !== 0 && handleAmountClick(formatCategoryName(cat), w.weekEnding, amount);
+                            }}
                           >
                             {amount !== 0 ? formatCurrency(amount) : "$0"}
                           </td>
@@ -741,10 +762,28 @@ export function ForecastGrid() {
           background: linear-gradient(135deg, rgb(250, 250, 250) 0%, rgb(248, 249, 250) 100%);
         }
 
+        .clickable-group-row {
+          cursor: pointer;
+          transition: all 0.2s ease;
+        }
+
+        .clickable-group-row:hover {
+          background: linear-gradient(135deg, rgb(245, 247, 246) 0%, rgb(243, 246, 245) 100%);
+        }
+
         .group-total-label {
           font-weight: 600 !important;
           font-size: 14px !important;
           color: #1e3a1e !important;
+          user-select: none;
+        }
+
+        .expand-icon {
+          display: inline-block;
+          margin-right: 8px;
+          font-size: 10px;
+          color: #2d5a2d;
+          transition: transform 0.2s ease;
         }
 
         .group-total-amount {
