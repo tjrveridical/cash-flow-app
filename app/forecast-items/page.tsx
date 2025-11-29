@@ -27,6 +27,7 @@ interface DisplayCategory {
   display_label: string;
   display_group: string;
   cash_direction: string;
+  sort_order: number;
 }
 
 interface HistoricalTransaction {
@@ -83,9 +84,9 @@ export default function ForecastItemsPage() {
       const categoriesRes = await fetch("/api/display-categories");
       const categoriesData = await categoriesRes.json();
       if (categoriesData.success) {
-        const expenseCategories = (categoriesData.categories || []).filter(
-          (cat: DisplayCategory) => cat.cash_direction === "Cashout"
-        );
+        const expenseCategories = (categoriesData.categories || [])
+          .filter((cat: DisplayCategory) => cat.cash_direction === "Cashout")
+          .sort((a: DisplayCategory, b: DisplayCategory) => a.sort_order - b.sort_order);
         setCategories(expenseCategories);
       }
 
@@ -305,6 +306,11 @@ function CreateEditModal({
       return;
     }
 
+    if (!formData.category_code) {
+      alert("Category is required");
+      return;
+    }
+
     if (!formData.rule_id) {
       alert("Payment rule is required");
       return;
@@ -371,17 +377,18 @@ function CreateEditModal({
           {/* Category */}
           <div>
             <label className="block text-sm font-medium text-slate-700 mb-1">
-              Category (Optional)
+              Category
             </label>
             <select
               value={formData.category_code}
               onChange={(e) => setFormData({ ...formData, category_code: e.target.value })}
               className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#2d5a2d] focus:border-transparent"
+              required
             >
               <option value="">Select category...</option>
               {categories.map((cat) => (
                 <option key={cat.category_code} value={cat.category_code}>
-                  {cat.display_group} - {cat.display_label}
+                  {cat.display_group} &gt; {cat.display_label}
                 </option>
               ))}
             </select>
