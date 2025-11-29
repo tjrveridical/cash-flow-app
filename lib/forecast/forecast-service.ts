@@ -234,18 +234,46 @@ export class ForecastService {
         )
         .eq("is_active", true);
 
+      // 📦 LOG: Forecast items query results
+      console.log("📦 Forecast Items Query Results:");
+      console.log(`   Total forecast_items returned: ${forecastItems?.length || 0}`);
+      if (forecastItems && forecastItems.length > 0) {
+        console.log("   First forecast_item:", JSON.stringify(forecastItems[0], null, 2));
+        console.log(`   Date range: ${formatDate(startDate)} to ${formatDate(endDate)}`);
+        console.log(`   Latest week ending: ${formatDate(latestWeekEnding)}`);
+      } else {
+        console.log("   ⚠️ No forecast_items returned from database");
+      }
+
       // Generate expense forecasts from forecast_items
       if (forecastItems && forecastItems.length > 0) {
         const dateGenerator = new DateGenerator();
+        let processedCount = 0;
+        let skippedCount = 0;
 
         for (const item of forecastItems) {
-          if (!item.payment_rule || !item.estimated_amount) continue;
+          // 🔍 LOG: Processing forecast item
+          console.log(`\n🔍 Processing forecast_item #${processedCount + skippedCount + 1}:`);
+          console.log(`   Vendor: ${item.vendor_name}`);
+          console.log(`   Amount: $${item.estimated_amount}`);
+          console.log(`   Category: ${item.category_code}`);
+          console.log(`   Has payment_rule: ${!!item.payment_rule}`);
+
+          if (!item.payment_rule || !item.estimated_amount) {
+            console.log("   ⚠️ SKIPPED: Missing payment_rule or estimated_amount");
+            skippedCount++;
+            continue;
+          }
 
           const rule = Array.isArray(item.payment_rule)
             ? item.payment_rule[0]
             : item.payment_rule;
 
-          if (!rule) continue;
+          if (!rule) {
+            console.log("   ⚠️ SKIPPED: payment_rule is null/undefined after extraction");
+            skippedCount++;
+            continue;
+          }
 
           // Convert DB rule to PaymentRule interface
           const paymentRule: PaymentRule = {
@@ -256,6 +284,9 @@ export class ForecastService {
             business_day_adjustment: rule.business_day_adjustment,
           };
 
+          // 🔍 LOG: Payment rule details
+          console.log("   PaymentRule object:", JSON.stringify(paymentRule, null, 2));
+
           // Generate payment dates for this item
           const paymentDates = dateGenerator.generateDates(
             paymentRule,
@@ -263,12 +294,29 @@ export class ForecastService {
             endDate
           );
 
+          // 📅 LOG: Date generation results
+          console.log(`   📅 Generated ${paymentDates.length} payment dates`);
+          if (paymentDates.length > 0) {
+            console.log(`   First date: ${paymentDates[0].toISOString().split("T")[0]}`);
+            console.log(`   Last date: ${paymentDates[paymentDates.length - 1].toISOString().split("T")[0]}`);
+          } else {
+            console.log("   ⚠️ WARNING: No dates generated for this rule");
+          }
+
           // For each payment date, add to appropriate week
+          let datesAdded = 0;
+          let datesSkipped = 0;
+
           for (const paymentDate of paymentDates) {
             const weekEnding = formatDate(getWeekEnding(paymentDate));
+            const paymentDateStr = paymentDate.toISOString().split("T")[0];
 
             // Only add to future weeks (after latest actual transaction)
-            if (new Date(weekEnding) <= latestWeekEnding) continue;
+            if (new Date(weekEnding) <= latestWeekEnding) {
+              console.log(`   ➖ SKIPPED date ${paymentDateStr} (week ${weekEnding}) - not a future week`);
+              datesSkipped++;
+              continue;
+            }
 
             // Get or create week bucket
             if (!weekMap.has(weekEnding)) {
@@ -278,7 +326,11 @@ export class ForecastService {
 
             // Get category display info
             const category = categoryMap.get(item.category_code);
-            if (!category) continue;
+            if (!category) {
+              console.log(`   ⚠️ SKIPPED date ${paymentDateStr} - category ${item.category_code} not found in categoryMap`);
+              datesSkipped++;
+              continue;
+            }
 
             // Get or create category bucket
             if (!categoryBucket.has(item.category_code)) {
@@ -298,8 +350,21 @@ export class ForecastService {
             const cat = categoryBucket.get(item.category_code)!;
             cat.amount += item.estimated_amount;
             cat.transactionCount += 1;
+
+            // ➕ LOG: Successfully added to week
+            console.log(`   ➕ ADDED $${item.estimated_amount} to ${category.display_label} for week ${weekEnding}`);
+            datesAdded++;
           }
+
+          console.log(`   ✅ Summary: ${datesAdded} dates added, ${datesSkipped} dates skipped for ${item.vendor_name}`);
+          processedCount++;
         }
+
+        // ✅ LOG: Final summary
+        console.log("\n✅ Forecast Items Processing Complete:");
+        console.log(`   Total items processed: ${processedCount}`);
+        console.log(`   Total items skipped: ${skippedCount}`);
+        console.log(`   Weeks with forecast data: ${Array.from(weekMap.keys()).length}`);
       }
 
       // Convert to WeeklyForecast array
