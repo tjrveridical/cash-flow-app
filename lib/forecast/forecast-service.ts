@@ -225,8 +225,10 @@ export class ForecastService {
           payment_rule:payment_rules!rule_id (
             id,
             frequency,
-            anchor_days,
-            exception_rule
+            anchor_day,
+            anchor_day2,
+            months,
+            business_day_adjustment
           )
         `
         )
@@ -248,8 +250,10 @@ export class ForecastService {
           // Convert DB rule to PaymentRule interface
           const paymentRule: PaymentRule = {
             frequency: rule.frequency,
-            anchor_days: rule.anchor_days,
-            exception_rule: rule.exception_rule,
+            anchor_day: rule.anchor_day,
+            anchor_day2: rule.anchor_day2,
+            months: rule.months,
+            business_day_adjustment: rule.business_day_adjustment,
           };
 
           // Generate payment dates for this item

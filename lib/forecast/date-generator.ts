@@ -6,13 +6,15 @@
  * and applies business day adjustments.
  */
 
-export type Frequency = 'weekly' | 'semi-monthly' | 'monthly' | 'quarterly' | 'semi-annual' | 'annual';
-export type ExceptionRule = 'move_earlier' | 'move_later';
+export type Frequency = 'Weekly' | 'SemiMonthly' | 'Monthly' | 'Quarterly' | 'SemiAnnual' | 'Annually';
+export type BusinessDayAdjustment = 'next' | 'previous';
 
 export interface PaymentRule {
   frequency: Frequency;
-  anchor_days: number[];  // JSONB array from DB
-  exception_rule: ExceptionRule;
+  anchor_day: string;  // "15", "Mon", "EOM", etc
+  anchor_day2?: number | null;  // For SemiMonthly (2nd day)
+  months?: string | null;  // Comma-separated like "3,6,9,12"
+  business_day_adjustment: BusinessDayAdjustment;
 }
 
 export class DateGenerator {
@@ -25,17 +27,17 @@ export class DateGenerator {
    */
   generateDates(rule: PaymentRule, startDate: Date, endDate: Date): Date[] {
     switch (rule.frequency) {
-      case 'monthly':
+      case 'Monthly':
         return this.generateMonthlyDates(rule, startDate, endDate);
-      case 'semi-monthly':
+      case 'SemiMonthly':
         return this.generateSemiMonthlyDates(rule, startDate, endDate);
-      case 'weekly':
+      case 'Weekly':
         return this.generateWeeklyDates(rule, startDate, endDate);
-      case 'quarterly':
+      case 'Quarterly':
         return this.generateQuarterlyDates(rule, startDate, endDate);
-      case 'semi-annual':
+      case 'SemiAnnual':
         return this.generateSemiAnnualDates(rule, startDate, endDate);
-      case 'annual':
+      case 'Annually':
         return this.generateAnnualDates(rule, startDate, endDate);
       default:
         console.warn(`Unknown frequency: ${rule.frequency}`);
@@ -45,24 +47,25 @@ export class DateGenerator {
 
   /**
    * Generate monthly payment dates
-   * anchor_days = [day_of_month] (e.g., [15] for 15th of each month)
+   * anchor_day = "15" or "EOM" (end of month)
    */
   private generateMonthlyDates(rule: PaymentRule, start: Date, end: Date): Date[] {
     const dates: Date[] = [];
-    const dayOfMonth = rule.anchor_days[0];
+    const isEndOfMonth = rule.anchor_day === 'EOM';
+    const dayOfMonth = isEndOfMonth ? 31 : parseInt(rule.anchor_day);
 
     let current = new Date(start);
     current.setDate(1); // Start at beginning of month
 
     while (current <= end) {
-      // Get last day of month to handle "31" = last day
+      // Get last day of month
       const lastDay = new Date(current.getFullYear(), current.getMonth() + 1, 0).getDate();
-      const targetDay = Math.min(dayOfMonth, lastDay);
+      const targetDay = isEndOfMonth ? lastDay : Math.min(dayOfMonth, lastDay);
 
       const paymentDate = new Date(current.getFullYear(), current.getMonth(), targetDay);
 
       if (paymentDate >= start && paymentDate <= end) {
-        dates.push(this.applyBusinessDayAdjustment(paymentDate, rule.exception_rule));
+        dates.push(this.applyBusinessDayAdjustment(paymentDate, rule.business_day_adjustment));
       }
 
       current.setMonth(current.getMonth() + 1);
@@ -73,11 +76,13 @@ export class DateGenerator {
 
   /**
    * Generate semi-monthly payment dates
-   * anchor_days = [day1, day2] (e.g., [1, 15] for 1st and 15th)
+   * anchor_day = first day (e.g., "1")
+   * anchor_day2 = second day (e.g., 15)
    */
   private generateSemiMonthlyDates(rule: PaymentRule, start: Date, end: Date): Date[] {
     const dates: Date[] = [];
-    const [day1, day2] = rule.anchor_days;
+    const day1 = parseInt(rule.anchor_day);
+    const day2 = rule.anchor_day2 || 15;
 
     let current = new Date(start);
     current.setDate(1); // Start at beginning of month
@@ -89,14 +94,14 @@ export class DateGenerator {
       const targetDay1 = Math.min(day1, lastDay);
       const paymentDate1 = new Date(current.getFullYear(), current.getMonth(), targetDay1);
       if (paymentDate1 >= start && paymentDate1 <= end) {
-        dates.push(this.applyBusinessDayAdjustment(paymentDate1, rule.exception_rule));
+        dates.push(this.applyBusinessDayAdjustment(paymentDate1, rule.business_day_adjustment));
       }
 
       // Second payment
       const targetDay2 = Math.min(day2, lastDay);
       const paymentDate2 = new Date(current.getFullYear(), current.getMonth(), targetDay2);
       if (paymentDate2 >= start && paymentDate2 <= end) {
-        dates.push(this.applyBusinessDayAdjustment(paymentDate2, rule.exception_rule));
+        dates.push(this.applyBusinessDayAdjustment(paymentDate2, rule.business_day_adjustment));
       }
 
       current.setMonth(current.getMonth() + 1);
@@ -107,11 +112,20 @@ export class DateGenerator {
 
   /**
    * Generate weekly payment dates
-   * anchor_days = [day_of_week] where 0=Sunday, 6=Saturday
+   * anchor_day = "Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"
    */
   private generateWeeklyDates(rule: PaymentRule, start: Date, end: Date): Date[] {
     const dates: Date[] = [];
-    const targetDay = rule.anchor_days[0]; // 0=Sunday, 1=Monday, etc.
+    const dayMap: Record<string, number> = {
+      Sun: 0,
+      Mon: 1,
+      Tue: 2,
+      Wed: 3,
+      Thu: 4,
+      Fri: 5,
+      Sat: 6,
+    };
+    const targetDay = dayMap[rule.anchor_day] ?? 1; // Default to Monday
 
     let current = new Date(start);
 
@@ -121,7 +135,7 @@ export class DateGenerator {
     }
 
     while (current <= end) {
-      dates.push(this.applyBusinessDayAdjustment(new Date(current), rule.exception_rule));
+      dates.push(this.applyBusinessDayAdjustment(new Date(current), rule.business_day_adjustment));
       current.setDate(current.getDate() + 7);
     }
 
@@ -130,19 +144,16 @@ export class DateGenerator {
 
   /**
    * Generate quarterly payment dates
-   * anchor_days = [day, starting_month] (e.g., [15, 2] = Feb 15, May 15, Aug 15, Nov 15)
+   * anchor_day = day of month (e.g., "15")
+   * months = comma-separated months (e.g., "3,6,9,12")
    */
   private generateQuarterlyDates(rule: PaymentRule, start: Date, end: Date): Date[] {
     const dates: Date[] = [];
-    const [day, startingMonth] = rule.anchor_days;
+    const day = parseInt(rule.anchor_day);
 
-    // Calculate all quarters: startingMonth, startingMonth+3, startingMonth+6, startingMonth+9
-    const months = [
-      startingMonth,
-      startingMonth + 3,
-      startingMonth + 6,
-      startingMonth + 9
-    ].map(m => ((m - 1) % 12) + 1); // Wrap to 1-12
+    // Parse months from comma-separated string
+    const monthsStr = rule.months || '3,6,9,12'; // Default to standard quarters
+    const months = monthsStr.split(',').map(m => parseInt(m.trim()));
 
     const startYear = start.getFullYear();
     const endYear = end.getFullYear();
@@ -154,7 +165,7 @@ export class DateGenerator {
         const paymentDate = new Date(year, month - 1, targetDay); // month-1 because JS months are 0-indexed
 
         if (paymentDate >= start && paymentDate <= end) {
-          dates.push(this.applyBusinessDayAdjustment(paymentDate, rule.exception_rule));
+          dates.push(this.applyBusinessDayAdjustment(paymentDate, rule.business_day_adjustment));
         }
       }
     }
@@ -164,11 +175,18 @@ export class DateGenerator {
 
   /**
    * Generate semi-annual payment dates
-   * anchor_days = [month1, day1, month2, day2] (e.g., [1, 1, 7, 1] = Jan 1 and Jul 1)
+   * anchor_day = day of first payment (e.g., "1")
+   * anchor_day2 = day of second payment (e.g., 1)
+   * months = two months (e.g., "1,7" for Jan and Jul)
    */
   private generateSemiAnnualDates(rule: PaymentRule, start: Date, end: Date): Date[] {
     const dates: Date[] = [];
-    const [month1, day1, month2, day2] = rule.anchor_days;
+    const day1 = parseInt(rule.anchor_day);
+    const day2 = rule.anchor_day2 || day1;
+
+    // Parse months from comma-separated string
+    const monthsStr = rule.months || '1,7'; // Default to Jan and Jul
+    const [month1, month2] = monthsStr.split(',').map(m => parseInt(m.trim()));
 
     const startYear = start.getFullYear();
     const endYear = end.getFullYear();
@@ -179,7 +197,7 @@ export class DateGenerator {
       const targetDay1 = Math.min(day1, lastDay1);
       const paymentDate1 = new Date(year, month1 - 1, targetDay1);
       if (paymentDate1 >= start && paymentDate1 <= end) {
-        dates.push(this.applyBusinessDayAdjustment(paymentDate1, rule.exception_rule));
+        dates.push(this.applyBusinessDayAdjustment(paymentDate1, rule.business_day_adjustment));
       }
 
       // Second payment
@@ -187,7 +205,7 @@ export class DateGenerator {
       const targetDay2 = Math.min(day2, lastDay2);
       const paymentDate2 = new Date(year, month2 - 1, targetDay2);
       if (paymentDate2 >= start && paymentDate2 <= end) {
-        dates.push(this.applyBusinessDayAdjustment(paymentDate2, rule.exception_rule));
+        dates.push(this.applyBusinessDayAdjustment(paymentDate2, rule.business_day_adjustment));
       }
     }
 
@@ -196,11 +214,13 @@ export class DateGenerator {
 
   /**
    * Generate annual payment dates
-   * anchor_days = [month, day] (e.g., [12, 31] = Dec 31)
+   * anchor_day = day of month (e.g., "31")
+   * months = single month (e.g., "12" for December)
    */
   private generateAnnualDates(rule: PaymentRule, start: Date, end: Date): Date[] {
     const dates: Date[] = [];
-    const [month, day] = rule.anchor_days;
+    const day = parseInt(rule.anchor_day);
+    const month = rule.months ? parseInt(rule.months) : 12; // Default to December
 
     const startYear = start.getFullYear();
     const endYear = end.getFullYear();
@@ -211,7 +231,7 @@ export class DateGenerator {
       const paymentDate = new Date(year, month - 1, targetDay);
 
       if (paymentDate >= start && paymentDate <= end) {
-        dates.push(this.applyBusinessDayAdjustment(paymentDate, rule.exception_rule));
+        dates.push(this.applyBusinessDayAdjustment(paymentDate, rule.business_day_adjustment));
       }
     }
 
@@ -221,20 +241,20 @@ export class DateGenerator {
   /**
    * Apply business day adjustment (move to next/previous business day if weekend)
    * @param date Original payment date
-   * @param adjustment 'move_later' = next business day, 'move_earlier' = previous business day
+   * @param adjustment 'next' = next business day, 'previous' = previous business day
    */
-  private applyBusinessDayAdjustment(date: Date, adjustment: ExceptionRule): Date {
+  private applyBusinessDayAdjustment(date: Date, adjustment: BusinessDayAdjustment): Date {
     const day = date.getDay();
     const adjusted = new Date(date);
 
     if (day === 0) { // Sunday
-      if (adjustment === 'move_later') {
+      if (adjustment === 'next') {
         adjusted.setDate(date.getDate() + 1); // Move to Monday
       } else {
         adjusted.setDate(date.getDate() - 2); // Move to Friday
       }
     } else if (day === 6) { // Saturday
-      if (adjustment === 'move_later') {
+      if (adjustment === 'next') {
         adjusted.setDate(date.getDate() + 2); // Move to Monday
       } else {
         adjusted.setDate(date.getDate() - 1); // Move to Friday
