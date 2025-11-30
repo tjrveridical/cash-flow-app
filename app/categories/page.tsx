@@ -184,6 +184,110 @@ export default function CategoriesPage() {
     }
   };
 
+  // Determine hierarchy level for a category
+  const getHierarchyLevel = (cat: Category): number => {
+    if (cat.display_label2) return 3; // Has label2 = Level 3
+    if (cat.display_label === cat.display_group) return 1; // Label matches group = Level 1
+    return 2; // Otherwise Level 2
+  };
+
+  // Get parent label for level 3 categories
+  const getParentLabel = (cat: Category): string | null => {
+    if (cat.display_label2) return cat.display_label;
+    return null;
+  };
+
+  // Check if two categories can swap (same group, same level, same parent if level 3)
+  const canSwap = (cat1: Category, cat2: Category): boolean => {
+    if (cat1.display_group !== cat2.display_group) return false;
+    const level1 = getHierarchyLevel(cat1);
+    const level2 = getHierarchyLevel(cat2);
+    if (level1 !== level2) return false;
+    if (level1 === 3) {
+      return getParentLabel(cat1) === getParentLabel(cat2);
+    }
+    return true;
+  };
+
+  // Find previous valid swap candidate
+  const findPreviousSwappable = (currentIndex: number): number => {
+    const currentCat = categories[currentIndex];
+    for (let i = currentIndex - 1; i >= 0; i--) {
+      if (canSwap(currentCat, categories[i])) {
+        return i;
+      }
+    }
+    return -1;
+  };
+
+  // Find next valid swap candidate
+  const findNextSwappable = (currentIndex: number): number => {
+    const currentCat = categories[currentIndex];
+    for (let i = currentIndex + 1; i < categories.length; i++) {
+      if (canSwap(currentCat, categories[i])) {
+        return i;
+      }
+    }
+    return -1;
+  };
+
+  // Handle moving category up
+  const handleMoveUp = async (categoryCode: string) => {
+    const currentIndex = categories.findIndex((c) => c.category_code === categoryCode);
+    if (currentIndex === -1) return;
+
+    const prevIndex = findPreviousSwappable(currentIndex);
+    if (prevIndex === -1) return;
+
+    await swapCategories(categories[currentIndex], categories[prevIndex]);
+  };
+
+  // Handle moving category down
+  const handleMoveDown = async (categoryCode: string) => {
+    const currentIndex = categories.findIndex((c) => c.category_code === categoryCode);
+    if (currentIndex === -1) return;
+
+    const nextIndex = findNextSwappable(currentIndex);
+    if (nextIndex === -1) return;
+
+    await swapCategories(categories[currentIndex], categories[nextIndex]);
+  };
+
+  // Swap sort_order between two categories
+  const swapCategories = async (cat1: Category, cat2: Category) => {
+    try {
+      // Swap sort_order values
+      const tempSortOrder = cat1.sort_order;
+      const newSortOrder1 = cat2.sort_order;
+      const newSortOrder2 = tempSortOrder;
+
+      // Update both categories
+      const [res1, res2] = await Promise.all([
+        fetch(`/api/display-categories/${cat1.category_code}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ sort_order: newSortOrder1 }),
+        }),
+        fetch(`/api/display-categories/${cat2.category_code}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ sort_order: newSortOrder2 }),
+        }),
+      ]);
+
+      const [data1, data2] = await Promise.all([res1.json(), res2.json()]);
+
+      if (data1.success && data2.success) {
+        await fetchCategories();
+      } else {
+        alert("Failed to reorder categories");
+      }
+    } catch (error) {
+      console.error("Error swapping categories:", error);
+      alert("An error occurred while reordering");
+    }
+  };
+
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === "Escape") {
       handleCancel();
@@ -262,10 +366,10 @@ export default function CategoriesPage() {
                     <th className="px-4 py-2 text-left text-[11px] font-semibold text-slate-600 uppercase tracking-wide border-b border-[#1e3a1e]/8 w-28">
                       Cash Direction
                     </th>
-                    <th className="px-4 py-2 text-right text-[11px] font-semibold text-slate-600 uppercase tracking-wide border-b border-[#1e3a1e]/8 w-24">
-                      Sort Order
+                    <th className="px-4 py-2 text-center text-[11px] font-semibold text-slate-600 uppercase tracking-wide border-b border-[#1e3a1e]/8 w-20">
+                      Order
                     </th>
-                    <th className="px-4 py-2 text-center text-[11px] font-semibold text-slate-600 uppercase tracking-wide border-b border-[#1e3a1e]/8 w-32">
+                    <th className="px-4 py-2 text-center text-[11px] font-semibold text-slate-600 uppercase tracking-wide border-b border-[#1e3a1e]/8 w-24">
                       Actions
                     </th>
                   </tr>
@@ -324,8 +428,39 @@ export default function CategoriesPage() {
                             {category.cash_direction}
                           </span>
                         </td>
-                        <td className="px-4 py-1.5 text-sm text-right text-slate-600 border-b border-[#1e3a1e]/4">
-                          {category.sort_order}
+                        <td className="px-4 py-1.5 text-center border-b border-[#1e3a1e]/4">
+                          <div className="flex gap-1 justify-center">
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleMoveUp(category.category_code);
+                              }}
+                              disabled={
+                                findPreviousSwappable(
+                                  categories.findIndex((c) => c.category_code === category.category_code)
+                                ) === -1
+                              }
+                              className="px-2 py-1 text-[11px] font-medium text-slate-700 bg-white border border-slate-300 rounded-md hover:bg-slate-50 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                              title="Move up"
+                            >
+                              ↑
+                            </button>
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleMoveDown(category.category_code);
+                              }}
+                              disabled={
+                                findNextSwappable(
+                                  categories.findIndex((c) => c.category_code === category.category_code)
+                                ) === -1
+                              }
+                              className="px-2 py-1 text-[11px] font-medium text-slate-700 bg-white border border-slate-300 rounded-md hover:bg-slate-50 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                              title="Move down"
+                            >
+                              ↓
+                            </button>
+                          </div>
                         </td>
                         <td className="px-4 py-1.5 text-center border-b border-[#1e3a1e]/4">
                           <button
@@ -491,16 +626,10 @@ function EditingRowComponent({
           ))}
         </select>
       </td>
-      <td className="px-2 py-1 border-b border-[#1e3a1e]/4">
-        <input
-          type="number"
-          value={editingRow.sort_order}
-          onChange={(e) =>
-            setEditingRow({ ...editingRow, sort_order: parseInt(e.target.value) || 0 })
-          }
-          className="w-full px-2 py-1.5 text-sm border border-slate-300 rounded focus:outline-none focus:ring-2 focus:ring-[#2d5a2d] focus:border-transparent text-right"
-          placeholder={suggestSortOrder(editingRow.display_group).toString()}
-        />
+      <td className="px-2 py-1 text-center border-b border-[#1e3a1e]/4">
+        <span className="text-sm text-slate-500 font-medium">
+          {editingRow.sort_order || suggestSortOrder(editingRow.display_group)}
+        </span>
       </td>
       <td className="px-2 py-1 text-center border-b border-[#1e3a1e]/4">
         <div className="flex gap-1 justify-center">
