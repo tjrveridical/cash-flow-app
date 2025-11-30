@@ -35,7 +35,7 @@ export default function PaymentRulesPage() {
       <header className="bg-gradient-to-br from-white/95 to-white/90 backdrop-blur-[20px] border-b border-[#1e3a1e]/8 px-6 py-3.5 sticky top-0 z-10 shadow-sm shadow-[#1e3a1e]/4">
         <div className="flex justify-between items-center">
           <h1 className="text-[22px] font-semibold bg-gradient-to-br from-[#1e3a1e] via-[#2d5a2d] to-[#3d6b3d] bg-clip-text text-transparent">
-            Forecast Items
+            Cash Flow Items
           </h1>
           <div className="flex gap-3 items-center">
             <button

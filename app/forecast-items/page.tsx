@@ -152,7 +152,7 @@ export default function ForecastItemsPage() {
               onClick={() => router.push("/forecast")}
               className="px-4 py-2 text-xs font-medium text-slate-700 bg-white/80 backdrop-blur-sm border border-[#1e3a1e]/10 rounded-lg hover:bg-white/95 hover:border-[#1e3a1e]/15 hover:shadow-sm transition-all"
             >
-              Back to Forecast
+              Back to Cash Flow
             </button>
             <button
               onClick={() => setCreateModalOpen(true)}
