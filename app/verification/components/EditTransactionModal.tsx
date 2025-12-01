@@ -40,7 +40,7 @@ interface EditTransactionModalProps {
 
 export function EditTransactionModal({ transaction, onClose, onSave }: EditTransactionModalProps) {
   const [categories, setCategories] = useState<Category[]>([]);
-  const [selectedCategoryCode, setSelectedCategoryCode] = useState("");
+  const [selectedCategoryCode, setSelectedCategoryCode] = useState<string | null>("");
   const [query, setQuery] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -241,7 +241,8 @@ export function EditTransactionModal({ transaction, onClose, onSave }: EditTrans
                     fontWeight: 500,
                     letterSpacing: '-0.01em',
                   }}
-                  displayValue={(categoryCode: string) => {
+                  displayValue={(categoryCode: string | null) => {
+                    if (!categoryCode) return "";
                     const cat = categories.find((c) => c.category_code === categoryCode);
                     return cat ? formatCategoryLabel(cat) : "";
                   }}
