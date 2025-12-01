@@ -159,6 +159,34 @@ export function ForecastGrid() {
       .reduce((sum, c) => sum + c.amount, 0);
   };
 
+  // Check if group total should be shown as actual or forecast
+  // Returns true if ALL children are actual, false if ANY child is forecast
+  const isGroupActual = (week: WeeklyForecast, group: string): boolean => {
+    const groupCategories = week.categories.filter((c) => c.displayGroup === group);
+    if (groupCategories.length === 0) return true;
+    return groupCategories.every((c) => c.isActual);
+  };
+
+  // Check if total inflows should be shown as actual or forecast
+  const isInflowsActual = (week: WeeklyForecast): boolean => {
+    const inflowCategories = week.categories.filter((c) => c.cashDirection === "Cashin");
+    if (inflowCategories.length === 0) return true;
+    return inflowCategories.every((c) => c.isActual);
+  };
+
+  // Check if total outflows should be shown as actual or forecast
+  const isOutflowsActual = (week: WeeklyForecast): boolean => {
+    const outflowCategories = week.categories.filter((c) => c.cashDirection === "Cashout");
+    if (outflowCategories.length === 0) return true;
+    return outflowCategories.every((c) => c.isActual);
+  };
+
+  // Check if net cash flow should be shown as actual or forecast
+  const isNetCashFlowActual = (week: WeeklyForecast): boolean => {
+    // Net cash flow is actual only if both inflows and outflows are actual
+    return isInflowsActual(week) && isOutflowsActual(week);
+  };
+
   // Format category display name with hierarchy
   const formatCategoryName = (cat: CategoryForecast): string => {
     if (cat.displayLabel2) {
@@ -466,11 +494,14 @@ export function ForecastGrid() {
             ))}
             <tr className="data-row total-row">
               <td className="category-cell">Total Inflows</td>
-              {weeks.map((w) => (
-                <td key={w.weekEnding} className="amount-cell amount-positive amount-actual">
-                  {formatCurrency(w.totalInflows)}
-                </td>
-              ))}
+              {weeks.map((w) => {
+                const isActual = isInflowsActual(w);
+                return (
+                  <td key={w.weekEnding} className={`amount-cell amount-positive ${isActual ? "amount-actual" : "amount-forecast"}`}>
+                    {formatCurrency(w.totalInflows)}
+                  </td>
+                );
+              })}
             </tr>
 
             {/* Cash Outflows - Dynamic Groups */}
@@ -494,10 +525,11 @@ export function ForecastGrid() {
                     </td>
                     {weeks.map((w) => {
                       const total = getGroupTotal(w, group);
+                      const isActual = isGroupActual(w, group);
                       return (
                         <td
                           key={w.weekEnding}
-                          className="amount-cell amount-negative amount-actual group-total-amount"
+                          className={`amount-cell amount-negative ${isActual ? "amount-actual" : "amount-forecast"} group-total-amount`}
                         >
                           {total !== 0 ? formatCurrency(total) : "$0"}
                         </td>
@@ -538,37 +570,46 @@ export function ForecastGrid() {
             {/* Totals */}
             <tr className="data-row total-row">
               <td className="category-cell">Total Outflows</td>
-              {weeks.map((w) => (
-                <td key={w.weekEnding} className="amount-cell amount-negative amount-actual">
-                  {formatCurrency(-w.totalOutflows)}
-                </td>
-              ))}
+              {weeks.map((w) => {
+                const isActual = isOutflowsActual(w);
+                return (
+                  <td key={w.weekEnding} className={`amount-cell amount-negative ${isActual ? "amount-actual" : "amount-forecast"}`}>
+                    {formatCurrency(-w.totalOutflows)}
+                  </td>
+                );
+              })}
             </tr>
             <tr className="data-row total-row">
               <td className="category-cell" title="Net change in cash position for each period">
                 Net Cash Flow
               </td>
-              {weeks.map((w) => (
-                <td
-                  key={w.weekEnding}
-                  className={`amount-cell ${w.netCashFlow >= 0 ? "amount-positive" : "amount-negative"} amount-actual`}
-                >
-                  {formatCurrency(w.netCashFlow)}
-                </td>
-              ))}
+              {weeks.map((w) => {
+                const isActual = isNetCashFlowActual(w);
+                return (
+                  <td
+                    key={w.weekEnding}
+                    className={`amount-cell ${w.netCashFlow >= 0 ? "amount-positive" : "amount-negative"} ${isActual ? "amount-actual" : "amount-forecast"}`}
+                  >
+                    {formatCurrency(w.netCashFlow)}
+                  </td>
+                );
+              })}
             </tr>
             <tr className="data-row total-row">
               <td className="category-cell" title="Projected cash balance at end of each period">
                 Ending Cash
               </td>
-              {weeks.map((w) => (
-                <td
-                  key={w.weekEnding}
-                  className={`amount-cell ${w.endingCash >= 0 ? "amount-positive" : "amount-negative"} amount-actual`}
-                >
-                  {formatCurrency(w.endingCash)}
-                </td>
-              ))}
+              {weeks.map((w) => {
+                const isActual = isNetCashFlowActual(w);
+                return (
+                  <td
+                    key={w.weekEnding}
+                    className={`amount-cell ${w.endingCash >= 0 ? "amount-positive" : "amount-negative"} ${isActual ? "amount-actual" : "amount-forecast"}`}
+                  >
+                    {formatCurrency(w.endingCash)}
+                  </td>
+                );
+              })}
             </tr>
           </tbody>
         </table>
@@ -831,14 +872,16 @@ export function ForecastGrid() {
           font-weight: 600;
         }
 
+        /* Actual entries - BLACK text (overrides positive/negative colors) */
         .amount-actual {
           font-weight: 700;
-          color: #0f172a;
+          color: #000000 !important;
         }
 
+        /* Forecasted entries - BLUE text (overrides positive/negative colors) */
         .amount-forecast {
-          opacity: 0.85;
           font-weight: 500;
+          color: #2563eb !important;
         }
 
         .clickable-amount {
