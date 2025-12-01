@@ -2,13 +2,16 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import Select from "react-select";
 
 interface PaymentRule {
   id: string;
   rule_name: string;
   frequency: string;
-  anchor_days: number[];
-  exception_rule: string;
+  anchor_day: string;
+  anchor_day2: number | null;
+  months: string | null;
+  business_day_adjustment: "next" | "previous" | "none";
 }
 
 interface ForecastItem {
@@ -56,6 +59,10 @@ export default function ForecastItemsPage() {
   const [paymentRules, setPaymentRules] = useState<PaymentRule[]>([]);
   const [loading, setLoading] = useState(true);
 
+  // Sorting state
+  const [sortColumn, setSortColumn] = useState<string>("vendor_name");
+  const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
+
   // Modal states
   const [createModalOpen, setCreateModalOpen] = useState(false);
   const [editModalState, setEditModalState] = useState<{ open: boolean; item: ForecastItem | null }>({
@@ -86,7 +93,11 @@ export default function ForecastItemsPage() {
       const categoriesData = await categoriesRes.json();
       if (categoriesData.success) {
         const expenseCategories = (categoriesData.categories || [])
-          .filter((cat: DisplayCategory) => cat.cash_direction === "Cashout")
+          .filter((cat: DisplayCategory) =>
+            cat.cash_direction === "Cashout" &&
+            cat.category_code != null &&
+            cat.category_code.trim().length > 0
+          )
           .sort((a: DisplayCategory, b: DisplayCategory) => a.sort_order - b.sort_order);
         setCategories(expenseCategories);
       }
@@ -122,6 +133,55 @@ export default function ForecastItemsPage() {
       console.error("Error deleting item:", error);
       alert("An error occurred while deleting");
     }
+  };
+
+  const handleSort = (column: string) => {
+    if (sortColumn === column) {
+      // Toggle direction if same column
+      setSortDirection(sortDirection === "asc" ? "desc" : "asc");
+    } else {
+      // New column, default to ascending
+      setSortColumn(column);
+      setSortDirection("asc");
+    }
+  };
+
+  const getSortedItems = () => {
+    const sorted = [...items].sort((a, b) => {
+      let aVal: any;
+      let bVal: any;
+
+      switch (sortColumn) {
+        case "vendor_name":
+          aVal = a.vendor_name.toLowerCase();
+          bVal = b.vendor_name.toLowerCase();
+          break;
+        case "payment_rule":
+          aVal = (a.rule?.rule_name || "").toLowerCase();
+          bVal = (b.rule?.rule_name || "").toLowerCase();
+          break;
+        case "anchor_dates":
+          aVal = a.rule?.anchor_day || "";
+          bVal = b.rule?.anchor_day || "";
+          break;
+        case "date_adjustment":
+          aVal = a.rule?.business_day_adjustment || "";
+          bVal = b.rule?.business_day_adjustment || "";
+          break;
+        case "amount":
+          aVal = a.estimated_amount;
+          bVal = b.estimated_amount;
+          break;
+        default:
+          return 0;
+      }
+
+      if (aVal < bVal) return sortDirection === "asc" ? -1 : 1;
+      if (aVal > bVal) return sortDirection === "asc" ? 1 : -1;
+      return 0;
+    });
+
+    return sorted;
   };
 
   const formatCurrency = (amount: number) => {
@@ -171,14 +231,60 @@ export default function ForecastItemsPage() {
             <table className="w-full" style={{ borderCollapse: "separate", borderSpacing: 0 }}>
               <thead>
                 <tr className="bg-gradient-to-br from-[#f8faf9]/90 to-[#f8faf9]/70">
-                  <th className="px-4 py-3 text-left text-[11px] font-semibold text-slate-600 uppercase tracking-wide border-b border-[#1e3a1e]/8">
-                    Vendor Name
+                  <th
+                    className="px-4 py-3 text-left text-[11px] font-semibold text-slate-600 uppercase tracking-wide border-b border-[#1e3a1e]/8 cursor-pointer hover:bg-[#f0f8f2]/50 transition-colors"
+                    onClick={() => handleSort("vendor_name")}
+                  >
+                    <div className="flex items-center gap-1">
+                      Vendor Name
+                      {sortColumn === "vendor_name" && (
+                        <span className="text-[#2d5a2d]">{sortDirection === "asc" ? "↑" : "↓"}</span>
+                      )}
+                    </div>
                   </th>
-                  <th className="px-4 py-3 text-left text-[11px] font-semibold text-slate-600 uppercase tracking-wide border-b border-[#1e3a1e]/8">
-                    Payment Rule
+                  <th
+                    className="px-4 py-3 text-left text-[11px] font-semibold text-slate-600 uppercase tracking-wide border-b border-[#1e3a1e]/8 cursor-pointer hover:bg-[#f0f8f2]/50 transition-colors"
+                    onClick={() => handleSort("payment_rule")}
+                  >
+                    <div className="flex items-center gap-1">
+                      Payment Rule
+                      {sortColumn === "payment_rule" && (
+                        <span className="text-[#2d5a2d]">{sortDirection === "asc" ? "↑" : "↓"}</span>
+                      )}
+                    </div>
                   </th>
-                  <th className="px-4 py-3 text-right text-[11px] font-semibold text-slate-600 uppercase tracking-wide border-b border-[#1e3a1e]/8">
-                    Forecast Amount
+                  <th
+                    className="px-4 py-3 text-center text-[11px] font-semibold text-slate-600 uppercase tracking-wide border-b border-[#1e3a1e]/8 cursor-pointer hover:bg-[#f0f8f2]/50 transition-colors"
+                    onClick={() => handleSort("anchor_dates")}
+                  >
+                    <div className="flex items-center justify-center gap-1">
+                      Anchor Dates
+                      {sortColumn === "anchor_dates" && (
+                        <span className="text-[#2d5a2d]">{sortDirection === "asc" ? "↑" : "↓"}</span>
+                      )}
+                    </div>
+                  </th>
+                  <th
+                    className="px-4 py-3 text-center text-[11px] font-semibold text-slate-600 uppercase tracking-wide border-b border-[#1e3a1e]/8 cursor-pointer hover:bg-[#f0f8f2]/50 transition-colors"
+                    onClick={() => handleSort("date_adjustment")}
+                  >
+                    <div className="flex items-center justify-center gap-1">
+                      Date Adjustment
+                      {sortColumn === "date_adjustment" && (
+                        <span className="text-[#2d5a2d]">{sortDirection === "asc" ? "↑" : "↓"}</span>
+                      )}
+                    </div>
+                  </th>
+                  <th
+                    className="px-4 py-3 text-right text-[11px] font-semibold text-slate-600 uppercase tracking-wide border-b border-[#1e3a1e]/8 cursor-pointer hover:bg-[#f0f8f2]/50 transition-colors"
+                    onClick={() => handleSort("amount")}
+                  >
+                    <div className="flex items-center justify-end gap-1">
+                      Forecast Amount
+                      {sortColumn === "amount" && (
+                        <span className="text-[#2d5a2d]">{sortDirection === "asc" ? "↑" : "↓"}</span>
+                      )}
+                    </div>
                   </th>
                   <th className="px-4 py-3 text-center text-[11px] font-semibold text-slate-600 uppercase tracking-wide border-b border-[#1e3a1e]/8">
                     Actions
@@ -186,7 +292,7 @@ export default function ForecastItemsPage() {
                 </tr>
               </thead>
               <tbody>
-                {items.map((item) => (
+                {getSortedItems().map((item) => (
                   <tr
                     key={item.id}
                     onClick={() => setHistoricalModalState({ open: true, vendorName: item.vendor_name })}
@@ -197,6 +303,35 @@ export default function ForecastItemsPage() {
                     </td>
                     <td className="px-4 py-3 text-sm text-slate-600 border-b border-[#1e3a1e]/4">
                       {item.rule?.rule_name || "N/A"}
+                    </td>
+                    <td className="px-4 py-3 text-sm text-center text-slate-600 border-b border-[#1e3a1e]/4">
+                      {item.rule ? (
+                        <>
+                          {item.rule.anchor_day}
+                          {item.rule.anchor_day2 && `, ${item.rule.anchor_day2}`}
+                        </>
+                      ) : (
+                        "—"
+                      )}
+                    </td>
+                    <td className="px-4 py-3 text-center border-b border-[#1e3a1e]/4">
+                      {item.rule ? (
+                        <span className={`inline-block px-2 py-0.5 rounded text-[9px] font-semibold ${
+                          item.rule.business_day_adjustment === "next"
+                            ? "bg-green-50 text-green-700"
+                            : item.rule.business_day_adjustment === "previous"
+                            ? "bg-orange-50 text-orange-700"
+                            : "bg-slate-50 text-slate-600"
+                        }`}>
+                          {item.rule.business_day_adjustment === "next"
+                            ? "Next"
+                            : item.rule.business_day_adjustment === "previous"
+                            ? "Prev"
+                            : "None"}
+                        </span>
+                      ) : (
+                        "—"
+                      )}
                     </td>
                     <td className="px-4 py-3 text-sm font-semibold text-right text-slate-900 border-b border-[#1e3a1e]/4">
                       {formatCurrency(item.estimated_amount)}
@@ -276,6 +411,55 @@ export default function ForecastItemsPage() {
   );
 }
 
+// Custom styles for react-select to match forest green theme
+const customSelectStyles = {
+  control: (base: any, state: any) => ({
+    ...base,
+    minHeight: '38px',
+    borderColor: state.isFocused ? '#2d5a2d' : '#cbd5e1',
+    borderRadius: '0.5rem',
+    fontSize: '0.875rem',
+    boxShadow: state.isFocused ? '0 0 0 2px rgba(45, 90, 45, 0.1)' : 'none',
+    '&:hover': {
+      borderColor: '#2d5a2d',
+    },
+  }),
+  option: (base: any, state: any) => ({
+    ...base,
+    fontSize: '0.875rem',
+    backgroundColor: state.isFocused
+      ? '#f0f8f2'
+      : state.isSelected
+      ? '#2d5a2d'
+      : 'white',
+    color: state.isSelected ? 'white' : '#334155',
+    cursor: 'pointer',
+    '&:active': {
+      backgroundColor: '#2d5a2d',
+    },
+  }),
+  menu: (base: any) => ({
+    ...base,
+    borderRadius: '0.5rem',
+    overflow: 'hidden',
+    maxHeight: '300px',
+  }),
+  menuList: (base: any) => ({
+    ...base,
+    maxHeight: '300px',
+  }),
+  placeholder: (base: any) => ({
+    ...base,
+    color: '#94a3b8',
+    fontSize: '0.875rem',
+  }),
+  singleValue: (base: any) => ({
+    ...base,
+    color: '#0f172a',
+    fontSize: '0.875rem',
+  }),
+};
+
 // Create/Edit Modal Component
 function CreateEditModal({
   item,
@@ -298,6 +482,18 @@ function CreateEditModal({
     notes: item?.notes || "",
   });
   const [saving, setSaving] = useState(false);
+
+  // Transform categories for react-select
+  const categoryOptions = categories.map((cat) => ({
+    value: cat.category_code,
+    label: `${cat.display_group} > ${cat.display_label}${cat.display_label2 ? ` > ${cat.display_label2}` : ''}`,
+  }));
+
+  // Transform payment rules for react-select
+  const paymentRuleOptions = paymentRules.map((rule) => ({
+    value: rule.id,
+    label: rule.rule_name,
+  }));
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -380,37 +576,35 @@ function CreateEditModal({
             <label className="block text-sm font-medium text-slate-700 mb-1">
               Category
             </label>
-            <select
-              value={formData.category_code}
-              onChange={(e) => setFormData({ ...formData, category_code: e.target.value })}
-              className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#2d5a2d] focus:border-transparent"
-              required
-            >
-              <option value="">Select category...</option>
-              {categories.map((cat) => (
-                <option key={cat.category_code} value={cat.category_code}>
-                  {cat.display_group} &gt; {cat.display_label}{cat.display_label2 ? ` > ${cat.display_label2}` : ''}
-                </option>
-              ))}
-            </select>
+            <Select
+              value={categoryOptions.find((opt) => opt.value === formData.category_code) || null}
+              onChange={(selected) =>
+                setFormData({ ...formData, category_code: selected?.value || "" })
+              }
+              options={categoryOptions}
+              styles={customSelectStyles}
+              placeholder="Select category..."
+              isClearable
+              isSearchable
+              menuPlacement="auto"
+            />
           </div>
 
           {/* Payment Rule */}
           <div>
             <label className="block text-sm font-medium text-slate-700 mb-1">Payment Rule</label>
-            <select
-              value={formData.rule_id}
-              onChange={(e) => setFormData({ ...formData, rule_id: e.target.value })}
-              className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#2d5a2d] focus:border-transparent"
-              required
-            >
-              <option value="">Select payment rule...</option>
-              {paymentRules.map((rule) => (
-                <option key={rule.id} value={rule.id}>
-                  {rule.rule_name}
-                </option>
-              ))}
-            </select>
+            <Select
+              value={paymentRuleOptions.find((opt) => opt.value === formData.rule_id) || null}
+              onChange={(selected) =>
+                setFormData({ ...formData, rule_id: selected?.value || "" })
+              }
+              options={paymentRuleOptions}
+              styles={customSelectStyles}
+              placeholder="Select payment rule..."
+              isClearable
+              isSearchable
+              menuPlacement="auto"
+            />
           </div>
 
           {/* Amount */}
