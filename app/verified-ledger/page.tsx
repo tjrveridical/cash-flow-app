@@ -38,6 +38,8 @@ export default function VerifiedLedgerPage() {
   const [stats, setStats] = useState<Stats>({ totalVerified: 0, totalInflow: 0, totalOutflow: 0 });
   const [loading, setLoading] = useState(true);
   const [editingTransaction, setEditingTransaction] = useState<VerifiedTransaction | null>(null);
+  const [sortColumn, setSortColumn] = useState<string>("date");
+  const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc");
 
   useEffect(() => {
     fetchVerifiedTransactions();
@@ -71,6 +73,50 @@ export default function VerifiedLedgerPage() {
     const d = new Date(dateStr);
     return d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
   };
+
+  const handleSort = (column: string) => {
+    if (sortColumn === column) {
+      setSortDirection(sortDirection === "asc" ? "desc" : "asc");
+    } else {
+      setSortColumn(column);
+      setSortDirection("asc");
+    }
+  };
+
+  // Sort transactions
+  const sortedTransactions = [...transactions].sort((a, b) => {
+    let aVal: any;
+    let bVal: any;
+
+    switch (sortColumn) {
+      case "date":
+        aVal = new Date(a.date).getTime();
+        bVal = new Date(b.date).getTime();
+        break;
+      case "vendor":
+        aVal = a.vendor.toLowerCase();
+        bVal = b.vendor.toLowerCase();
+        break;
+      case "amount":
+        aVal = a.amount;
+        bVal = b.amount;
+        break;
+      case "category":
+        aVal = a.displayGroup.toLowerCase();
+        bVal = b.displayGroup.toLowerCase();
+        break;
+      case "source":
+        aVal = a.source.toLowerCase();
+        bVal = b.source.toLowerCase();
+        break;
+      default:
+        return 0;
+    }
+
+    if (aVal < bVal) return sortDirection === "asc" ? -1 : 1;
+    if (aVal > bVal) return sortDirection === "asc" ? 1 : -1;
+    return 0;
+  });
 
   const handleEdit = (transaction: VerifiedTransaction) => {
     setEditingTransaction(transaction);
@@ -281,62 +327,71 @@ export default function VerifiedLedgerPage() {
                       className="px-3 py-2.5 text-left text-[11px] uppercase cursor-pointer transition-colors"
                       style={{
                         fontWeight: 600,
-                        color: '#374151',
+                        color: sortColumn === "date" ? '#2d5a2d' : '#374151',
                         letterSpacing: '0.02em',
                         borderBottom: '1px solid rgba(30, 58, 30, 0.08)',
                       }}
+                      onClick={() => handleSort("date")}
                       onMouseEnter={(e) => { e.currentTarget.style.color = '#2d5a2d'; }}
-                      onMouseLeave={(e) => { e.currentTarget.style.color = '#374151'; }}
+                      onMouseLeave={(e) => { e.currentTarget.style.color = sortColumn === "date" ? '#2d5a2d' : '#374151'; }}
                     >
-                      Date
+                      Date {sortColumn === "date" && (sortDirection === "asc" ? "↑" : "↓")}
                     </th>
                     <th
                       className="px-3 py-2.5 text-left text-[11px] uppercase cursor-pointer transition-colors"
                       style={{
                         fontWeight: 600,
-                        color: '#374151',
+                        color: sortColumn === "vendor" ? '#2d5a2d' : '#374151',
                         letterSpacing: '0.02em',
                         borderBottom: '1px solid rgba(30, 58, 30, 0.08)',
                       }}
+                      onClick={() => handleSort("vendor")}
                       onMouseEnter={(e) => { e.currentTarget.style.color = '#2d5a2d'; }}
-                      onMouseLeave={(e) => { e.currentTarget.style.color = '#374151'; }}
+                      onMouseLeave={(e) => { e.currentTarget.style.color = sortColumn === "vendor" ? '#2d5a2d' : '#374151'; }}
                     >
-                      Vendor
+                      Vendor {sortColumn === "vendor" && (sortDirection === "asc" ? "↑" : "↓")}
                     </th>
                     <th
                       className="px-3 py-2.5 text-right text-[11px] uppercase cursor-pointer transition-colors"
                       style={{
                         fontWeight: 600,
-                        color: '#374151',
+                        color: sortColumn === "amount" ? '#2d5a2d' : '#374151',
                         letterSpacing: '0.02em',
                         borderBottom: '1px solid rgba(30, 58, 30, 0.08)',
                       }}
+                      onClick={() => handleSort("amount")}
                       onMouseEnter={(e) => { e.currentTarget.style.color = '#2d5a2d'; }}
-                      onMouseLeave={(e) => { e.currentTarget.style.color = '#374151'; }}
+                      onMouseLeave={(e) => { e.currentTarget.style.color = sortColumn === "amount" ? '#2d5a2d' : '#374151'; }}
                     >
-                      Amount
+                      Amount {sortColumn === "amount" && (sortDirection === "asc" ? "↑" : "↓")}
                     </th>
                     <th
-                      className="px-3 py-2.5 text-left text-[11px] uppercase"
+                      className="px-3 py-2.5 text-left text-[11px] uppercase cursor-pointer transition-colors"
                       style={{
                         fontWeight: 600,
-                        color: '#374151',
+                        color: sortColumn === "category" ? '#2d5a2d' : '#374151',
                         letterSpacing: '0.02em',
                         borderBottom: '1px solid rgba(30, 58, 30, 0.08)',
                       }}
+                      onClick={() => handleSort("category")}
+                      onMouseEnter={(e) => { e.currentTarget.style.color = '#2d5a2d'; }}
+                      onMouseLeave={(e) => { e.currentTarget.style.color = sortColumn === "category" ? '#2d5a2d' : '#374151'; }}
                     >
-                      Category
+                      Category {sortColumn === "category" && (sortDirection === "asc" ? "↑" : "↓")}
                     </th>
                     <th
-                      className="px-3 py-2.5 text-left text-[11px] uppercase"
+                      className="px-3 py-2.5 text-left text-[11px] uppercase cursor-pointer transition-colors"
                       style={{
                         fontWeight: 600,
-                        color: '#374151',
+                        color: sortColumn === "source" ? '#2d5a2d' : '#374151',
                         letterSpacing: '0.02em',
                         borderBottom: '1px solid rgba(30, 58, 30, 0.08)',
                       }}
+                      onClick={() => handleSort("source")}
+                      onMouseEnter={(e) => { e.currentTarget.style.color = '#2d5a2d'; }}
+                      onMouseLeave={(e) => { e.currentTarget.style.color = sortColumn === "source" ? '#2d5a2d' : '#374151'; }}
                     >
-                      Source
+                      Source {sortColumn === "source" && (sortDirection === "asc" ? "↑" : "↓")}
                     </th>
                     <th
                       className="px-3 py-2.5 text-right text-[11px] uppercase"
@@ -352,7 +407,7 @@ export default function VerifiedLedgerPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {transactions.map((tx) => (
+                  {sortedTransactions.map((tx) => (
                     <tr
                       key={tx.id}
                       className="transition-all"
