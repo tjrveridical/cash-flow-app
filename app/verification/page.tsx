@@ -151,6 +151,35 @@ export default function VerificationPage() {
     }
   };
 
+  const handleUndoLastVerification = async () => {
+    const confirmed = window.confirm(
+      "This will undo the most recent verification batch and move all those transactions back to the inbox. Are you sure?"
+    );
+
+    if (!confirmed) return;
+
+    try {
+      const response = await fetch("/api/verification/undo-last", {
+        method: "POST",
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        alert(
+          `Successfully unverified ${data.count} transaction(s) from ${new Date(data.timestamp).toLocaleString()}`
+        );
+        await fetchUnverifiedTransactions();
+      } else {
+        console.error("Undo failed:", data.error);
+        alert(`Failed to undo verification: ${data.error}`);
+      }
+    } catch (error) {
+      console.error("Error undoing verification:", error);
+      alert("An error occurred while undoing verification");
+    }
+  };
+
   if (loading) {
     return (
       <div
@@ -219,6 +248,27 @@ export default function VerificationPage() {
               }}
             >
               Export
+            </button>
+            <button
+              className="px-4 py-2.5 text-xs rounded-lg cursor-pointer transition-all duration-200 hover:-translate-y-px"
+              style={{
+                background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)',
+                border: '1px solid #d97706',
+                color: 'white',
+                fontWeight: 550,
+                boxShadow: '0 1px 0 rgba(255, 255, 255, 0.1) inset',
+              }}
+              onClick={handleUndoLastVerification}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.background = 'linear-gradient(135deg, #d97706 0%, #b45309 100%)';
+                e.currentTarget.style.boxShadow = '0 6px 20px rgba(245, 158, 11, 0.25), 0 1px 0 rgba(255, 255, 255, 0.15) inset';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.background = 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)';
+                e.currentTarget.style.boxShadow = '0 1px 0 rgba(255, 255, 255, 0.1) inset';
+              }}
+            >
+              Undo Last Verification
             </button>
             <button
               className="px-4 py-2.5 text-xs rounded-lg cursor-pointer transition-all duration-200 hover:-translate-y-px"
